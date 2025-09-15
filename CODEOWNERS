@@ -1,0 +1,11 @@
+# Global code owners
+* @your-username
+
+# Core module
+/event_selector/core/ @your-username
+
+# GUI module
+/event_selector/gui/ @your-username
+
+# Tests
+/tests/ @your-username

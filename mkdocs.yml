@@ -1,0 +1,69 @@
+site_name: Event Selector
+site_description: Hardware/Firmware Event Mask Management Tool
+site_author: Your Name
+site_url: https://event-selector.readthedocs.io
+
+repo_name: yourusername/event-selector
+repo_url: https://github.com/yourusername/event-selector
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_submodules: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage:
+    - GUI Guide: usage/gui.md
+    - CLI Guide: usage/cli.md
+    - File Formats: usage/formats.md
+  - API Reference:
+    - Core: api/core.md
+    - GUI: api/gui.md
+    - Utils: api/utils.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.snippets
+  - attr_list
+  - md_in_html
+  - tables
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername
