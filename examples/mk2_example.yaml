@@ -1,0 +1,30 @@
+# Example mk2 format YAML file
+sources:
+  - name: controller
+    description: Controller events
+
+id_names:
+  0: Data Processing
+  1: Network Stack
+  2: Application Layer
+  3: System Monitor
+
+base_address: 0x40000000
+
+# ID 0, bit 0
+0x000:
+  event_source: controller
+  description: Data ready
+  info: Normal
+
+# ID 0, bit 1
+0x001:
+  event_source: controller
+  description: Data error
+  info: Error condition
+
+# ID 1, bit 0
+0x100:
+  event_source: controller
+  description: Network connected
+  info: Status

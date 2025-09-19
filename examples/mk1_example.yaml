@@ -1,0 +1,29 @@
+# Example mk1 format YAML file
+sources:
+  - name: hardware
+    description: Hardware events
+  - name: firmware
+    description: Firmware events
+
+# Data events (IDs 0-3)
+0x000:
+  event_source: hardware
+  description: Data event 0
+  info: Normal operation
+
+0x020:
+  event_source: hardware
+  description: Data event 32
+  info: Error condition
+
+# Network events (IDs 4-7)
+0x200:
+  event_source: firmware
+  description: Network event 0
+  info: Sync event
+
+# Application events (IDs 8-11)
+0x400:
+  event_source: firmware
+  description: Application event 0
+  info: Status update
