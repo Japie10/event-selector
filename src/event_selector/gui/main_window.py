@@ -758,8 +758,31 @@ class MainWindow(QMainWindow):
 
     def _autosave_session(self) -> None:
         """Autosave current session."""
-        # TODO: Implement autosave
-        pass
+        from event_selector.utils.autosave import get_autosave
+        
+        # Build session state
+        self.session_state.open_files = list(self.open_tabs.keys())
+        self.session_state.active_tab = self.tab_widget.currentIndex()
+        
+        # Save window geometry
+        self.session_state.window_geometry = {
+            "x": self.x(),
+            "y": self.y(), 
+            "width": self.width(),
+            "height": self.height()
+        }
+        
+        # Save dock states
+        self.session_state.dock_states["problems_dock"] = self.problems_dock_widget.isVisible()
+        
+        # Save mask states for each tab
+        for filepath, tab in self.open_tabs.items():
+            mask = tab.get_current_mask()
+            self.session_state.mask_states[filepath] = mask.tolist()
+        
+        # Save to file
+        autosave = get_autosave()
+        autosave.save_session(self.session_state)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Handle window close event.
@@ -812,7 +835,6 @@ def main() -> None:
     window.show()
 
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()

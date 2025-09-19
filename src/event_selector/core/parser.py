@@ -117,10 +117,13 @@ class EventParser:
         self.format_type = self.detect_format(data)
 
         # Parse based on format
-        if self.format_type == FormatType.MK1:
-            return self._parse_mk1(data, source)
-        else:
-            return self._parse_mk2(data, source)
+        match self.format_type:
+            case FormatType.MK1:
+                return self._parse_mk1(data, source)
+            case FormatType.MK2:
+                return self._parse_mk2(data, source)
+            case _:
+                raise FormatDetectionError("Unknown format")
 
     def detect_format(self, data: Dict[str, Any]) -> FormatType:
         """Detect whether data is mk1 or mk2 format.
