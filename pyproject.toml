@@ -67,9 +67,6 @@ Changelog = "https://github.com/yourusername/event-selector/blob/main/CHANGELOG.
 [project.scripts]
 event-selector = "event_selector.cli.app:main"
 
-[project.gui-scripts]
-event-selector-gui = "event_selector.gui.main_window:main"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 

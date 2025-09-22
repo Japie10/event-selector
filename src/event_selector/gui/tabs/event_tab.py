@@ -5,7 +5,7 @@ with tri-state checkboxes, filtering, and undo/redo support.
 """
 
 from pathlib import Path
-from typing import Optional, Dict, List, Any, Union
+from typing import Optional, Dict, List, Any, TypeAlias
 import re
 
 from PyQt5.QtWidgets import (
@@ -24,6 +24,7 @@ from event_selector.core.models import (
     EventMk1, EventMk2, MaskData
 )
 
+FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 class TriStateCheckBox(QCheckBox):
     """Tri-state checkbox for event selection."""
@@ -361,7 +362,7 @@ class EventTab(QWidget):
     selection_changed = pyqtSignal()
     events_modified = pyqtSignal()
 
-    def __init__(self, format_obj: Union[Mk1Format, Mk2Format], 
+    def __init__(self, format_obj: FormatObject, 
                  filepath: Path, mode: MaskMode, parent=None):
         super().__init__(parent)
         self.format_obj = format_obj

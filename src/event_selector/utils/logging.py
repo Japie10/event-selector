@@ -9,34 +9,22 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from loguru import logger
-
-
-def get_log_dir() -> Path:
-    """Get log directory path.
-
-    Returns:
-        Path to log directory
-    """
-    if sys.platform == "win32":
-        log_dir = Path.home() / "AppData" / "Local" / "EventSelector" / "logs"
-    elif sys.platform == "darwin":
-        log_dir = Path.home() / "Library" / "Logs" / "EventSelector"
-    else:
-        log_dir = Path.home() / ".local" / "state" / "event-selector"
-
-    log_dir.mkdir(parents=True, exist_ok=True)
-    return log_dir
+from event_selector.utils.paths import get_log_dir
 
 
 def setup_logging(level: str = "INFO", 
                   log_file: Optional[Path] = None,
-                  json_format: bool = True) -> None:
+                  json_format: bool = True,
+                  console_output: bool = False,
+                  console_level: str = "WARNING") -> None:
     """Setup logging configuration.
 
     Args:
-        level: Log level (TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        level: Log level for file output
         log_file: Optional log file path
         json_format: Use JSON format for logs
+        console_output: Enable console output (for debugging)
+        console_level: Console output level
     """
     # Remove default handler
     logger.remove()
@@ -51,18 +39,30 @@ def setup_logging(level: str = "INFO",
         "CRITICAL": "CRITICAL"
     }
     log_level = level_map.get(level.upper(), "INFO")
+    console_log_level = level_map.get(console_level.upper(), "WARNING")
 
-    # Add console handler for warnings and above
-    logger.add(
-        sys.stderr,
-        level="WARNING",
-        format="<yellow>{time:HH:mm:ss}</yellow> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        colorize=True
-    )
+    # Add console handler if requested (for debugging)
+    if console_output:
+        logger.add(
+            sys.stdout,  # Use stdout for debug output
+            level=console_log_level,
+            format="<green>{time:HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+            colorize=True
+        )
+    else:
+        # In normal mode, only show errors/warnings to stderr
+        logger.add(
+            sys.stderr,
+            level="WARNING",
+            format="<yellow>{time:HH:mm:ss}</yellow> | <level>{level: <8}</level> | <level>{message}</level>",
+            colorize=True
+        )
 
     # Add file handler
     if log_file is None:
-        log_file = get_log_dir() / "event-selector.jsonl"
+        log_dir = get_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "event-selector.jsonl"
 
     if json_format:
         # JSON Lines format
@@ -84,8 +84,10 @@ def setup_logging(level: str = "INFO",
             retention=5
         )
 
-    logger.info(f"Logging initialized at level {log_level}")
-
+    if console_output:
+        logger.info(f"Logging initialized at level {log_level} with console output at {console_log_level}")
+    else:
+        logger.info(f"Logging initialized at level {log_level}")
 
 def json_formatter(record: Dict[str, Any]) -> str:
     """Format log record as JSON.

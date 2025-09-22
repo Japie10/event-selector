@@ -1,13 +1,13 @@
 """Autosave functionality for Event Selector."""
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
 from event_selector.core.models import SessionState, MaskMode
 from event_selector.utils.logging import get_logger
+from event_selector.utils.paths import get_app_data_dir  # NEW IMPORT
 
 logger = get_logger(__name__)
 
@@ -25,13 +25,7 @@ class Autosave:
         Returns:
             Path to autosave file
         """
-        if sys.platform == "win32":
-            data_dir = Path.home() / "AppData" / "Local" / "EventSelector"
-        elif sys.platform == "darwin":
-            data_dir = Path.home() / "Library" / "Application Support" / "Event Selector"
-        else:
-            data_dir = Path.home() / ".local" / "share" / "event-selector"
-
+        data_dir = get_app_data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
         return data_dir / "autosave.json"
 

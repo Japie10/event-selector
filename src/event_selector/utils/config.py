@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from event_selector.utils.logging import get_logger
+from event_selector.utils.paths import get_config_dir
 
 logger = get_logger(__name__)
 
@@ -37,13 +38,7 @@ class Config:
         Returns:
             Path to config file
         """
-        if sys.platform == "win32":
-            config_dir = Path.home() / "AppData" / "Roaming" / "EventSelector"
-        elif sys.platform == "darwin":
-            config_dir = Path.home() / "Library" / "Application Support" / "Event Selector"
-        else:
-            config_dir = Path.home() / ".config" / "event-selector"
-
+        config_dir = get_config_dir()
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir / "config.json"
 

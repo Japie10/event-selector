@@ -6,7 +6,7 @@ including cross-validation, mask validation, and error aggregation.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeAlias
 from collections import defaultdict
 
 import numpy as np
@@ -29,6 +29,7 @@ from event_selector.core.models import (
     MK2_BIT_MASK,
 )
 
+FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 class Validator:
     """Comprehensive validator for event formats and masks."""
@@ -159,7 +160,7 @@ class Validator:
 
     def validate_mask_compatibility(self,
                                    mask_data: MaskData,
-                                   format_obj: Union[Mk1Format, Mk2Format]) -> ValidationResult:
+                                   format_obj: FormatObject) -> ValidationResult:
         """Validate that mask is compatible with format definition.
 
         Args:
@@ -490,7 +491,7 @@ class Validator:
                         )
 
 
-def validate_format(format_obj: Union[Mk1Format, Mk2Format]) -> ValidationResult:
+def validate_format(format_obj: FormatObject) -> ValidationResult:
     """Convenience function to validate a format object.
 
     Args:
@@ -516,7 +517,7 @@ def validate_format(format_obj: Union[Mk1Format, Mk2Format]) -> ValidationResult
 
 
 def validate_mask(mask_data: MaskData,
-                  format_obj: Optional[Union[Mk1Format, Mk2Format]] = None) -> ValidationResult:
+                  format_obj: Optional[FormatObject] = None) -> ValidationResult:
     """Convenience function to validate mask data.
 
     Args:

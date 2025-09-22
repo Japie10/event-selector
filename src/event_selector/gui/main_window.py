@@ -819,22 +819,3 @@ class MainWindow(QMainWindow):
         self._autosave_session()
 
         event.accept()
-
-
-def main() -> None:
-    """Main entry point for GUI application."""
-    app = QApplication(sys.argv)
-    app.setOrganizationName("EventSelector")
-    app.setApplicationName("Event Selector")
-
-    # Set application style
-    app.setStyle("Fusion")
-
-    # Create and show main window
-    window = MainWindow()
-    window.show()
-
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()

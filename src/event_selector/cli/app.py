@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Event Selector CLI - Minimal command-line interface."""
+"""Event Selector CLI - Single entry point with GUI and debug support."""
 
 import sys
 import argparse
 import logging
 from pathlib import Path
-from typing import Optional, NoReturn
+from typing import Optional, NoReturn, List
 
 # Try to import version from package
 try:
@@ -13,29 +13,13 @@ try:
 except ImportError:
     __version__ = "0.0.0+unknown"
 
-# Import logging setup
-try:
-    from event_selector.utils.logging import setup_logging, get_logger
-except ImportError:
-    # Fallback if logging module not yet implemented
-    def setup_logging(level: str = "INFO") -> logging.Logger:
-        """Fallback logging setup."""
-        logging.basicConfig(
-            level=getattr(logging, level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        return logging.getLogger("event_selector")
-
-    def get_logger(name: str) -> logging.Logger:
-        """Get logger instance."""
-        return logging.getLogger(name)
-
+from event_selector.utils.logging import setup_logging, get_logger
 
 logger = get_logger(__name__)
 
 
 class EventSelectorCLI:
-    """Minimal CLI for Event Selector."""
+    """CLI entry point for Event Selector."""
 
     def __init__(self):
         """Initialize CLI."""
@@ -51,7 +35,6 @@ class EventSelectorCLI:
         parser = argparse.ArgumentParser(
             prog="event-selector",
             description="Event Selector - Hardware/Firmware Event Mask Management Tool",
-            epilog="For GUI mode, use: event-selector-gui",
             formatter_class=argparse.RawDescriptionHelpFormatter,
             add_help=True
         )
@@ -71,20 +54,20 @@ class EventSelectorCLI:
             type=str,
             choices=["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
             default=None,
-            help="set debug/logging level (TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+            help="set debug/logging level and start GUI with debug output"
         )
 
-        # Hidden argument for future YAML file support (not in minimal spec but useful)
+        # YAML files to open on startup
         parser.add_argument(
-            "yaml_file",
-            nargs="?",
+            "yaml_files",
+            nargs="*",
             type=str,
-            help=argparse.SUPPRESS  # Hidden for now as per minimal CLI spec
+            help="YAML files to open on startup"
         )
 
         return parser
 
-    def parse_args(self, args: Optional[list[str]] = None) -> argparse.Namespace:
+    def parse_args(self, args: Optional[List[str]] = None) -> argparse.Namespace:
         """Parse command-line arguments.
 
         Args:
@@ -100,46 +83,22 @@ class EventSelectorCLI:
         """Configure logging based on debug level."""
         if self.args and self.args.debug:
             level = self.args.debug
-            logger.info(f"Setting logging level to: {level}")
-
-            # Configure root logger
-            root_logger = logging.getLogger()
-            root_logger.setLevel(getattr(logging, level.upper()))
-
-            # Configure console handler
-            console_handler = logging.StreamHandler(sys.stderr)
-            console_handler.setLevel(getattr(logging, level.upper()))
-
-            # Create formatter
-            if level == "TRACE":
-                # More detailed format for TRACE level
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - "
-                    "[%(filename)s:%(lineno)d] - %(funcName)s() - %(message)s"
-                )
-            elif level == "DEBUG":
-                # Detailed format for DEBUG
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - "
-                    "[%(filename)s:%(lineno)d] - %(message)s"
-                )
-            else:
-                # Standard format for INFO and above
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(levelname)s - %(message)s"
-                )
-
-            console_handler.setFormatter(formatter)
-
-            # Clear existing handlers and add new one
-            root_logger.handlers.clear()
-            root_logger.addHandler(console_handler)
-
-            # Log initial debug message
-            logger.debug(f"Logging configured with level: {level}")
+            
+            # Setup logging with console output for debugging
+            setup_logging(
+                level=level,
+                console_output=True,  # Enable console output
+                console_level=level   # Set console level to debug level
+            )
+            
+            logger.info(f"Debug mode enabled: {level}")
+            logger.debug(f"Command line arguments: {self.args}")
+        else:
+            # Normal mode - only file logging
+            setup_logging(level="INFO", console_output=False)
 
     def run(self) -> int:
-        """Run the CLI application.
+        """Run the application.
 
         Returns:
             Exit code (0 for success, non-zero for error)
@@ -148,46 +107,14 @@ class EventSelectorCLI:
             # Parse arguments
             self.parse_args()
 
-            # Setup logging if debug flag provided
+            # Setup logging
             self.setup_logging()
 
             # Log startup
-            logger.debug(f"Event Selector CLI v{__version__} starting")
-            logger.debug(f"Arguments: {self.args}")
+            logger.info(f"Event Selector v{__version__} starting")
 
-            # Since this is minimal CLI, just check if we should launch GUI
-            if self.args.yaml_file:
-                logger.warning(
-                    "Direct YAML file handling not supported in CLI mode. "
-                    "Please use GUI mode: event-selector-gui"
-                )
-                print(
-                    "Note: The CLI interface is minimal and intended for debugging only.\n"
-                    "For full functionality, please use the GUI:\n"
-                    "  event-selector-gui [yaml_file]\n",
-                    file=sys.stderr
-                )
-                return 1
-
-            # If we get here with just debug flag, show info message
-            if self.args.debug:
-                logger.info(f"Event Selector CLI v{__version__}")
-                logger.info("Debug logging is now active")
-                logger.debug("Use event-selector-gui for the graphical interface")
-                print(
-                    f"Event Selector v{__version__}\n"
-                    f"Debug level: {self.args.debug}\n"
-                    f"For GUI mode, use: event-selector-gui"
-                )
-            else:
-                # No arguments provided, show help
-                self.parser.print_help()
-                print(
-                    "\nNote: This is the minimal CLI interface.\n"
-                    "For full functionality, use: event-selector-gui"
-                )
-
-            return 0
+            # Launch GUI
+            return self._launch_gui()
 
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
@@ -199,28 +126,62 @@ class EventSelectorCLI:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
+    def _launch_gui(self) -> int:
+        """Launch the GUI application.
+
+        Returns:
+            Exit code from GUI application
+        """
+        try:
+            from PyQt5.QtWidgets import QApplication
+            from event_selector.gui.main_window import MainWindow
+
+            logger.info("Launching GUI")
+
+            # Create Qt application
+            app = QApplication(sys.argv)
+            app.setOrganizationName("EventSelector")
+            app.setApplicationName("Event Selector")
+            app.setStyle("Fusion")
+
+            # Create main window
+            window = MainWindow()
+
+            # Load any YAML files specified on command line
+            if self.args.yaml_files:
+                for yaml_file in self.args.yaml_files:
+                    filepath = Path(yaml_file)
+                    if filepath.exists() and filepath.suffix in ['.yaml', '.yml']:
+                        logger.info(f"Loading file from command line: {filepath}")
+                        window.load_yaml_file(str(filepath))
+                    else:
+                        logger.warning(f"File not found or not a YAML file: {filepath}")
+
+            # Show window
+            window.show()
+
+            # Run event loop
+            logger.info("GUI started successfully")
+            return app.exec_()
+
+        except ImportError as e:
+            logger.error(f"Failed to import GUI components: {e}")
+            print(
+                "Error: GUI components not available. "
+                "Please install PyQt5: pip install PyQt5",
+                file=sys.stderr
+            )
+            return 1
+
 
 def main() -> NoReturn:
-    """Main entry point for CLI.
+    """Main entry point for Event Selector.
 
     This function never returns normally; it always calls sys.exit().
     """
     cli = EventSelectorCLI()
     exit_code = cli.run()
     sys.exit(exit_code)
-
-
-def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
-    """Parse arguments (for testing).
-
-    Args:
-        args: Optional list of arguments
-
-    Returns:
-        Parsed arguments
-    """
-    cli = EventSelectorCLI()
-    return cli.parse_args(args)
 
 
 if __name__ == "__main__":

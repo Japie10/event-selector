@@ -6,7 +6,7 @@ detect their format, and associate them with YAML definitions.
 
 import re
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any, Union
+from typing import Optional, Tuple, Dict, Any
 from enum import Enum
 
 import numpy as np
@@ -53,7 +53,7 @@ class Importer:
         self.base_address: Optional[int] = None
         self.yaml_file: Optional[str] = None
 
-    def import_file(self, filepath: Union[str, Path]) -> MaskData:
+    def import_file(self, filepath: str | Path) -> MaskData:
         """Import mask/trigger file.
 
         Args:
@@ -124,7 +124,7 @@ class Importer:
 
         return mask_data
 
-    def detect_format(self, filepath: Union[str, Path]) -> Tuple[FormatType, FileFormat, MaskMode]:
+    def detect_format(self, filepath: str | Path) -> Tuple[FormatType, FileFormat, MaskMode]:
         """Detect format of mask file without full import.
 
         Args:
@@ -548,7 +548,7 @@ class Importer:
         )
 
 
-def import_mask_file(filepath: Union[str, Path]) -> Tuple[MaskData, ValidationResult]:
+def import_mask_file(filepath: str | Path) -> Tuple[MaskData, ValidationResult]:
     """Convenience function to import a mask file.
 
     Args:
@@ -565,7 +565,7 @@ def import_mask_file(filepath: Union[str, Path]) -> Tuple[MaskData, ValidationRe
     return mask_data, importer.validation_result
 
 
-def detect_mask_format(filepath: Union[str, Path]) -> Tuple[FormatType, FileFormat, MaskMode]:
+def detect_mask_format(filepath: str | Path) -> Tuple[FormatType, FileFormat, MaskMode]:
     """Convenience function to detect mask file format.
 
     Args:
@@ -581,7 +581,7 @@ def detect_mask_format(filepath: Union[str, Path]) -> Tuple[FormatType, FileForm
     return importer.detect_format(filepath)
 
 
-def find_associated_yaml(mask_filepath: Union[str, Path]) -> Optional[Path]:
+def find_associated_yaml(mask_filepath: str | Path) -> Optional[Path]:
     """Find YAML file associated with mask file.
 
     Looks for:

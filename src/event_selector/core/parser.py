@@ -7,7 +7,7 @@ and comprehensive validation.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, TypeAlias
 from enum import Enum
 
 import yaml
@@ -27,6 +27,7 @@ from event_selector.core.models import (
     normalize_mk2_key,
 )
 
+FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 class ParseError(Exception):
     """Base exception for parsing errors."""
@@ -60,9 +61,9 @@ class EventParser:
         self.format_type: Optional[FormatType] = None
         self.raw_data: Optional[Dict[str, Any]] = None
         self.sources: List[EventSource] = []
-        self.events: Dict[str, Union[EventMk1, EventMk2]] = {}
+        self.events: Dict[str, EventMk1 | EventMk2] = {}
 
-    def parse_file(self, filepath: Union[str, Path]) -> Union[Mk1Format, Mk2Format]:
+    def parse_file(self, filepath: str | Path) -> FormatObject:
         """Parse YAML file and return appropriate format object.
 
         Args:
@@ -93,7 +94,7 @@ class EventParser:
 
         return self.parse_data(raw_data, str(filepath))
 
-    def parse_data(self, data: Dict[str, Any], source: str = "unknown") -> Union[Mk1Format, Mk2Format]:
+    def parse_data(self, data: Dict[str, Any], source: str = "unknown") -> FormatObject:
         """Parse YAML data and return appropriate format object.
 
         Args:
@@ -504,7 +505,7 @@ class EventParser:
         return sources
 
 
-def parse_yaml_file(filepath: Union[str, Path]) -> Tuple[Union[Mk1Format, Mk2Format], ValidationResult]:
+def parse_yaml_file(filepath: str | Path) -> Tuple[FormatObject, ValidationResult]:
     """Convenience function to parse a YAML file.
 
     Args:
@@ -521,7 +522,7 @@ def parse_yaml_file(filepath: Union[str, Path]) -> Tuple[Union[Mk1Format, Mk2For
     return result, parser.validation_result
 
 
-def parse_yaml_data(data: Dict[str, Any], source: str = "unknown") -> Tuple[Union[Mk1Format, Mk2Format], ValidationResult]:
+def parse_yaml_data(data: Dict[str, Any], source: str = "unknown") -> Tuple[FormatObject, ValidationResult]:
     """Convenience function to parse YAML data.
 
     Args:

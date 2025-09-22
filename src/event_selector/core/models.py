@@ -4,7 +4,7 @@ This module defines the data models for mk1 and mk2 event formats,
 including validation rules and normalization logic.
 """
 
-from typing import Any, Optional, Union, Dict, List, Literal
+from typing import Any, Optional, Dict, List, Literal
 from enum import Enum
 import re
 from pathlib import Path
@@ -114,7 +114,7 @@ class BaseEvent(StrictModel):
 # MK1 Models
 # =====================
 
-def normalize_mk1_address(address: Union[str, int]) -> str:
+def normalize_mk1_address(address: str | int) -> str:
     """Normalize MK1 address to 0xNNN format.
 
     Args:
@@ -189,7 +189,7 @@ class EventMk1(BaseEvent):
 
     @field_validator('address')
     @classmethod
-    def validate_and_normalize_address(cls, v: Union[str, int]) -> str:
+    def validate_and_normalize_address(cls, v: str | int) -> str:
         """Validate and normalize address."""
         return normalize_mk1_address(v)
 
@@ -277,7 +277,7 @@ class Mk1Format(StrictModel):
 # MK2 Models
 # =====================
 
-def normalize_mk2_key(key: Union[str, int]) -> str:
+def normalize_mk2_key(key: str | int) -> str:
     """Normalize MK2 key to 0xibb format.
 
     Args:
@@ -325,7 +325,7 @@ class EventMk2(BaseEvent):
 
     @field_validator('key')
     @classmethod
-    def validate_and_normalize_key(cls, v: Union[str, int]) -> str:
+    def validate_and_normalize_key(cls, v: str | int) -> str:
         """Validate and normalize key."""
         return normalize_mk2_key(v)
 

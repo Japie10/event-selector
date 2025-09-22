@@ -7,7 +7,7 @@ in Format A and Format B, with comprehensive metadata headers.
 import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, List, Dict, Any, TypeAlias
 from io import StringIO
 
 import numpy as np
@@ -21,6 +21,8 @@ from event_selector.core.models import (
     Mk2Format,
     MK2_BIT_MASK,
 )
+
+FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 # Try to import version, fallback if not available
 try:
@@ -36,9 +38,9 @@ class ExportError(Exception):
 
 class Exporter:
     """Exporter for mask and trigger data."""
-
+    
     def __init__(self, 
-                 format_obj: Optional[Union[Mk1Format, Mk2Format]] = None,
+                 format_obj: Optional[FormatObject] = None,
                  mask_data: Optional[MaskData] = None):
         """Initialize exporter.
 
@@ -184,7 +186,7 @@ class Exporter:
         return output.getvalue()
 
     def export_to_file(self,
-                      filepath: Union[str, Path],
+                      filepath: str | Path,
                       mask_array: np.ndarray,
                       mode: MaskMode = MaskMode.MASK,
                       format_b: bool = False,
@@ -341,7 +343,7 @@ def export_mask(mask_array: np.ndarray,
         )
 
 
-def export_from_format(format_obj: Union[Mk1Format, Mk2Format],
+def export_from_format(format_obj: FormatObject,
                        mask_array: np.ndarray,
                        mode: MaskMode = MaskMode.MASK,
                        format_b: bool = False,
