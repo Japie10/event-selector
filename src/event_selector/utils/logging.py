@@ -66,14 +66,15 @@ def setup_logging(level: str = "INFO",
 
     if json_format:
         # JSON Lines format
-        logger.add(
-            log_file,
-            level=log_level,
-            format=json_formatter,
-            rotation="10 MB",
-            retention=5,
-            compression="gz"
-        )
+        # logger.add(
+        #     log_file,
+        #     level=log_level,
+        #     format=json_formatter,
+        #     rotation="10 MB",
+        #     retention=5,
+        #     compression="gz"
+        # )
+        pass
     else:
         # Plain text format
         logger.add(

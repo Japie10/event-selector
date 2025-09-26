@@ -27,12 +27,15 @@ from event_selector.core.exporter import Exporter
 from event_selector.gui.tabs.event_tab import EventTab
 from event_selector.gui.widgets.problems_dock import ProblemsDock
 from event_selector.gui.dialogs.restore_dialog import RestoreDialog
+from event_selector.utils.logging import get_logger
 
 # Try to import version
 try:
     from event_selector import __version__
 except ImportError:
     __version__ = "0.0.0+unknown"
+
+logger = get_logger(__name__)
 
 
 class MainWindow(QMainWindow):
@@ -49,6 +52,8 @@ class MainWindow(QMainWindow):
             parent: Parent widget
         """
         super().__init__(parent)
+        
+        logger.trace("Running")
 
         self.setWindowTitle("Event Selector")
         self.resize(1200, 800)
@@ -69,6 +74,7 @@ class MainWindow(QMainWindow):
         self._setup_toolbar()
         self._setup_dock_widgets()
         self._setup_statusbar()
+        self._show_welcome_tab()
 
         # Restore state
         self._restore_window_state()
@@ -78,6 +84,7 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         """Setup main UI components."""
+        logger.trace("Running")
         # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -85,7 +92,6 @@ class MainWindow(QMainWindow):
         # Main layout
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
-
         # Mode selector
         mode_widget = self._create_mode_selector()
         layout.addWidget(mode_widget)
@@ -97,9 +103,6 @@ class MainWindow(QMainWindow):
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
         layout.addWidget(self.tab_widget)
 
-        # Show welcome message if no tabs
-        if self.tab_widget.count() == 0:
-            self._show_welcome_tab()
 
     def _create_mode_selector(self) -> QWidget:
         """Create mode selector widget.
@@ -107,6 +110,7 @@ class MainWindow(QMainWindow):
         Returns:
             Mode selector widget
         """
+        logger.trace("Running")
         widget = QWidget()
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(5, 5, 5, 5)
@@ -140,6 +144,7 @@ class MainWindow(QMainWindow):
 
     def _setup_menus(self) -> None:
         """Setup menu bar."""
+        logger.trace("Running")
         menubar = self.menuBar()
 
         # File menu
@@ -267,6 +272,7 @@ class MainWindow(QMainWindow):
 
     def _setup_toolbar(self) -> None:
         """Setup toolbar."""
+        logger.trace("Running")
         toolbar = QToolBar("Main Toolbar")
         toolbar.setObjectName("MainToolbar")
         self.addToolBar(toolbar)
@@ -284,6 +290,7 @@ class MainWindow(QMainWindow):
     def _setup_dock_widgets(self) -> None:
         """Setup dock widgets."""
         # Problems dock
+        logger.trace("Running")
         self.problems_dock = ProblemsDock()
         self.problems_dock_widget = QDockWidget("Problems", self)
         self.problems_dock_widget.setObjectName("ProblemsDock")
@@ -298,6 +305,7 @@ class MainWindow(QMainWindow):
 
     def _setup_statusbar(self) -> None:
         """Setup status bar."""
+        logger.trace("Running")
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
 
@@ -313,6 +321,11 @@ class MainWindow(QMainWindow):
 
     def _show_welcome_tab(self) -> None:
         """Show welcome tab when no files are loaded."""
+        logger.trace("Running")
+        
+        if self.tab_widget.count() != 0:
+            return None
+        
         welcome_widget = QWidget()
         layout = QVBoxLayout(welcome_widget)
         layout.setAlignment(Qt.AlignCenter)
@@ -332,6 +345,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(welcome_widget, "Welcome")
 
     def _open_yaml_file(self) -> None:
+        logger.trace("Running")
         """Open YAML file dialog."""
         filepath, _ = QFileDialog.getOpenFileName(
             self,
@@ -349,6 +363,7 @@ class MainWindow(QMainWindow):
         Args:
             filepath: Path to YAML file
         """
+        logger.trace("Start")
         filepath = Path(filepath)
 
         # Check if already open
@@ -361,31 +376,40 @@ class MainWindow(QMainWindow):
 
         try:
             # Parse YAML
+            logger.trace("Parse YAML")
             format_obj, validation = parse_yaml_file(filepath)
-
             # Show validation issues
+            logger.trace("Show validation issues")
+            
             if validation.has_errors or validation.has_warnings:
                 self.problems_dock.add_validation_result(validation, str(filepath))
 
             # Create tab
-            event_tab = EventTab(format_obj, filepath, self.current_mode)
+            logger.trace("Create event tab")
+            event_tab = EventTab(format_obj, filepath)
+            logger.trace("Created event tab object")
             event_tab.selection_changed.connect(self._update_selection_count)
-            event_tab.events_modified.connect(self._on_events_modified)
+            logger.trace("Connected to event tab object")
+            # event_tab.changeEvent..connect(self._on_events_modified)
 
             # Remove welcome tab if present
+            logger.trace("Remove welcome tab")
             if self.tab_widget.count() == 1 and self.tab_widget.tabText(0) == "Welcome":
                 self.tab_widget.removeTab(0)
 
             # Add tab
+            logger.trace("Add tab")
             index = self.tab_widget.addTab(event_tab, filepath.name)
             self.tab_widget.setCurrentIndex(index)
             self.tab_widget.setTabToolTip(index, str(filepath))
 
             # Store reference
+            logger.trace("Store reference")
             self.open_tabs[str(filepath)] = event_tab
             self.session_state.add_file(str(filepath))
 
             # Update UI
+            logger.trace("Update UI")
             self._update_ui_state()
             self.statusbar.showMessage(f"Loaded {filepath.name}", 2000)
             self.file_loaded.emit(str(filepath))
@@ -400,6 +424,7 @@ class MainWindow(QMainWindow):
 
     def _import_mask_file(self) -> None:
         """Import mask file dialog."""
+        logger.trace("Running")
         filepath, _ = QFileDialog.getOpenFileName(
             self,
             "Import Mask File",
@@ -449,10 +474,12 @@ class MainWindow(QMainWindow):
 
     def _export_mask(self) -> None:
         """Export current mask."""
+        logger.trace("Running")
         self._export_current(MaskMode.MASK)
 
     def _export_trigger(self) -> None:
         """Export current trigger."""
+        logger.trace("Running")
         self._export_current(MaskMode.TRIGGER)
 
     def _export_current(self, mode: MaskMode) -> None:
@@ -461,6 +488,7 @@ class MainWindow(QMainWindow):
         Args:
             mode: Export mode (mask or trigger)
         """
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if not isinstance(current_tab, EventTab):
             return
@@ -493,6 +521,7 @@ class MainWindow(QMainWindow):
         Args:
             index: Tab index to close
         """
+        logger.trace("Running")
         widget = self.tab_widget.widget(index)
         if isinstance(widget, EventTab):
             # Check for unsaved changes
@@ -526,6 +555,7 @@ class MainWindow(QMainWindow):
 
     def _close_current_tab(self) -> None:
         """Close current tab."""
+        logger.trace("Running")
         index = self.tab_widget.currentIndex()
         if index >= 0:
             self._close_tab(index)
@@ -536,6 +566,7 @@ class MainWindow(QMainWindow):
         Args:
             index: New tab index
         """
+        logger.trace("Running")
         self._update_ui_state()
 
         # Update current file label
@@ -543,13 +574,13 @@ class MainWindow(QMainWindow):
             widget = self.tab_widget.widget(index)
             if isinstance(widget, EventTab):
                 self.current_file_label.setText(widget.filepath.name)
-                self._update_event_count(widget)
                 self._update_selection_count()
             else:
                 self.current_file_label.setText("No file loaded")
 
     def _on_mode_changed(self) -> None:
         """Handle mode change."""
+        logger.trace("Running")
         if self.mask_button.isChecked():
             self.current_mode = MaskMode.MASK
         else:
@@ -564,12 +595,14 @@ class MainWindow(QMainWindow):
 
     def _on_events_modified(self) -> None:
         """Handle events modification."""
+        logger.trace("Running")
         sender = self.sender()
         if isinstance(sender, EventTab):
             self._update_event_count(sender)
 
     def _update_ui_state(self) -> None:
         """Update UI state based on current tab."""
+        logger.trace("Running")
         has_tab = self.tab_widget.count() > 0 and self.tab_widget.tabText(0) != "Welcome"
         current_tab = self.tab_widget.currentWidget()
         is_event_tab = isinstance(current_tab, EventTab)
@@ -605,11 +638,13 @@ class MainWindow(QMainWindow):
         Args:
             tab: Event tab
         """
+        logger.trace("Running")
         count = tab.get_event_count()
         self.event_count_label.setText(f"Events: {count}")
 
     def _update_selection_count(self) -> None:
         """Update selection count in status bar."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.get_selection_count()
@@ -620,6 +655,7 @@ class MainWindow(QMainWindow):
     # Edit menu actions
     def _undo(self) -> None:
         """Undo last action."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             current_tab.undo()
@@ -627,6 +663,7 @@ class MainWindow(QMainWindow):
 
     def _redo(self) -> None:
         """Redo last undone action."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             current_tab.redo()
@@ -634,18 +671,21 @@ class MainWindow(QMainWindow):
 
     def _select_all(self) -> None:
         """Select all events in current tab."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             current_tab.select_all()
 
     def _select_none(self) -> None:
         """Deselect all events in current tab."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             current_tab.select_none()
 
     def _select_all_errors(self) -> None:
         """Select all error events."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.select_by_info("error")
@@ -653,6 +693,7 @@ class MainWindow(QMainWindow):
 
     def _unselect_all_errors(self) -> None:
         """Unselect all error events."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.unselect_by_info("error")
@@ -660,6 +701,7 @@ class MainWindow(QMainWindow):
 
     def _select_all_syncs(self) -> None:
         """Select all sync events."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.select_by_info_regex(r"(sync|sbs|sws|ebs)")
@@ -667,6 +709,7 @@ class MainWindow(QMainWindow):
 
     def _unselect_all_syncs(self) -> None:
         """Unselect all sync events."""
+        logger.trace("Running")
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.unselect_by_info_regex(r"(sync|sbs|sws|ebs)")
@@ -674,6 +717,7 @@ class MainWindow(QMainWindow):
 
     def _show_about(self) -> None:
         """Show about dialog."""
+        logger.trace("Running")
         QMessageBox.about(
             self,
             "About Event Selector",
@@ -685,6 +729,7 @@ class MainWindow(QMainWindow):
 
     def _restore_window_state(self) -> None:
         """Restore window state from settings."""
+        logger.trace("Running")
         # Window geometry
         geometry = self.settings.value("window/geometry")
         if geometry:
@@ -702,12 +747,14 @@ class MainWindow(QMainWindow):
 
     def _save_window_state(self) -> None:
         """Save window state to settings."""
+        logger.trace("Running")
         self.settings.setValue("window/geometry", self.saveGeometry())
         self.settings.setValue("window/state", self.saveState())
         self.settings.setValue("docks/problems_visible", self.problems_dock_widget.isVisible())
 
     def _check_startup_actions(self) -> None:
         """Check for startup actions (restore session, scan directory, etc)."""
+        logger.trace("Running")
         # Check for command line arguments
         args = QApplication.arguments()
         if len(args) > 1:
@@ -730,11 +777,13 @@ class MainWindow(QMainWindow):
 
     def _try_restore_session(self) -> None:
         """Try to restore previous session."""
+        logger.trace("Running")
         # TODO: Implement session restore
         pass
 
     def _scan_current_directory(self) -> None:
         """Scan current directory for mask/YAML files."""
+        logger.trace("Running")
         current_dir = Path.cwd()
 
         # Look for YAML files
@@ -758,6 +807,7 @@ class MainWindow(QMainWindow):
 
     def _autosave_session(self) -> None:
         """Autosave current session."""
+        logger.trace("Running")
         from event_selector.utils.autosave import get_autosave
         
         # Build session state
@@ -790,6 +840,7 @@ class MainWindow(QMainWindow):
         Args:
             event: Close event
         """
+        logger.trace("Running")
         # Check for unsaved changes
         unsaved_tabs = []
         for tab in self.open_tabs.values():

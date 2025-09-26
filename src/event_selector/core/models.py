@@ -77,14 +77,26 @@ class StrictModel(BaseModel):
         validate_assignment=True,
         extra="forbid",
         str_strip_whitespace=True,
-        use_enum_values=True,
+        use_enum_values=False,
     )
 
 
 class EventSource(StrictModel):
     """Event source definition."""
-    name: str = Field(..., min_length=1, max_length=100)
-    description: str = Field(..., min_length=1, max_length=500)
+    print ("test0")
+    source_id: str = Field(..., min_length=1, max_length=2)
+    name: str = Field(..., min_length=1, max_length=500)
+    print (source_id)
+    print (name)
+    @field_validator('source_id')
+    @classmethod
+    def validate_source_id(cls, v: str) -> str:
+        """Validate source name."""
+        try:
+            int(v, 16)
+        except ValueError:
+            raise ValueError(f"Source ID must be a hexadecimal string: {v}")
+        return v
 
     @field_validator('name')
     @classmethod
@@ -251,6 +263,10 @@ class Mk1Format(StrictModel):
                 pass  # Could log warning here
         return self
 
+    @property
+    def format_type(self) -> FormatType:
+        return FormatType.MK1
+
     def get_subtab_events(self, subtab: Literal["Data", "Network", "Application"]) -> Dict[str, EventMk1]:
         """Get events for a specific subtab."""
         return {
@@ -389,6 +405,10 @@ class Mk2Format(StrictModel):
             normalized[norm_key] = key
         return self
 
+    @property
+    def format_type(self) -> FormatType:
+        return FormatType.MK2
+
     def get_id_events(self, id_num: int) -> Dict[str, EventMk2]:
         """Get events for a specific ID."""
         return {
@@ -461,13 +481,15 @@ class ValidationResult(StrictModel):
                   location: Optional[str] = None,
                   details: Optional[Dict[str, Any]] = None) -> None:
         """Add a validation issue."""
-        self.issues.append(ValidationIssue(
+        issue = ValidationIssue(
             code=code,
             level=level,
             message=message,
             location=location,
             details=details
-        ))
+        )
+
+        self.issues.append(issue)
 
 
 # =====================

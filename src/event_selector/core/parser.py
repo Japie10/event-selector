@@ -26,8 +26,12 @@ from event_selector.core.models import (
     normalize_mk1_address,
     normalize_mk2_key,
 )
+from event_selector.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 FormatObject: TypeAlias = Mk1Format | Mk2Format
+
 
 class ParseError(Exception):
     """Base exception for parsing errors."""
@@ -53,11 +57,13 @@ class EventParser:
         Args:
             validation_result: Optional ValidationResult to collect issues
         """
+        logger.trace("Start")
         self.validation_result = validation_result or ValidationResult()
         self._reset_state()
 
     def _reset_state(self) -> None:
         """Reset parser state."""
+        logger.trace("Start")
         self.format_type: Optional[FormatType] = None
         self.raw_data: Optional[Dict[str, Any]] = None
         self.sources: List[EventSource] = []
@@ -77,6 +83,7 @@ class EventParser:
             FormatDetectionError: If format cannot be detected
             ParseError: If parsing fails
         """
+        logger.trace("Start")
         filepath = Path(filepath)
 
         # Check file exists
@@ -108,6 +115,7 @@ class EventParser:
             FormatDetectionError: If format cannot be detected
             ParseError: If parsing fails
         """
+        logger.trace("Start")
         self._reset_state()
         self.raw_data = data
 
@@ -133,7 +141,7 @@ class EventParser:
         1. If 'id_names' or 'base_address' present -> mk2
         2. If any key matches mk2 pattern (0xibb) -> mk2
         3. If any key matches mk1 ranges -> mk1
-        4. Default to mk1 if ambiguous
+        4. Default to mk2 if ambiguous
 
         Args:
             data: Parsed YAML data
@@ -144,13 +152,10 @@ class EventParser:
         Raises:
             FormatDetectionError: If format cannot be determined
         """
-        # Check for mk2-specific keys
-        if 'id_names' in data or 'base_address' in data:
-            return FormatType.MK2
+        logger.trace("Start")
 
         # Check event keys
-        mk1_pattern = re.compile(r'^(?:0x)?[0-9a-fA-F]{1,3}$')
-        mk2_pattern = re.compile(r'^(?:0x)?[0-9a-fA-F]{3}$')
+        pattern = re.compile(r'^(?:0x)?[0-9a-fA-F]+$')
 
         has_mk1_keys = False
         has_mk2_keys = False
@@ -160,9 +165,8 @@ class EventParser:
                 continue
 
             key_str = str(key)
-
             # Try to interpret as mk2 key
-            if mk2_pattern.match(key_str):
+            if pattern.match(key_str):
                 try:
                     normalized = normalize_mk2_key(key)
                     # If successful, it's a valid mk2 key
@@ -171,7 +175,7 @@ class EventParser:
                     pass
 
             # Try to interpret as mk1 address
-            if mk1_pattern.match(key_str) or isinstance(key, int):
+            if pattern.match(key_str) or isinstance(key, int):
                 try:
                     normalized = normalize_mk1_address(key)
                     # Check if in valid mk1 range
@@ -184,6 +188,9 @@ class EventParser:
                     pass
 
         # Determine format
+        # Check for mk2-specific keys
+        if 'id_names' in data or 'base_address' in data:
+            return FormatType.MK2
         if has_mk2_keys and not has_mk1_keys:
             return FormatType.MK2
         elif has_mk1_keys and not has_mk2_keys:
@@ -202,7 +209,7 @@ class EventParser:
             # No valid event keys found
             if not any(k not in ['sources'] for k in data.keys()):
                 # Only sources, no events
-                return FormatType.MK1  # Default
+                return FormatType.MK2  # Default
             raise FormatDetectionError(
                 "Cannot detect format: no valid mk1 addresses or mk2 keys found"
             )
@@ -217,6 +224,7 @@ class EventParser:
         Returns:
             Mk1Format object
         """
+        logger.trace("Start")
         # Parse sources
         sources = self._parse_sources(data.get('sources', []))
 
@@ -300,6 +308,7 @@ class EventParser:
         Returns:
             Mk2Format object
         """
+        logger.trace("Start")
         # Parse sources
         sources = self._parse_sources(data.get('sources', []))
 
@@ -380,7 +389,7 @@ class EventParser:
             try:
                 # Try to normalize key
                 normalized_key = normalize_mk2_key(key)
-
+                
                 # Check for duplicates after normalization
                 if normalized_key in duplicates:
                     self.validation_result.add_issue(
@@ -400,7 +409,7 @@ class EventParser:
                     info=value.get('info', '')
                 )
 
-                events[key] = event  # Store with original key
+                events[normalized_key] = event  # Store with normalized key (string)
                 duplicates[normalized_key] = key
 
             except ValidationError as e:
@@ -443,7 +452,6 @@ class EventParser:
         # Check if we have any valid events
         if not events and self.validation_result.has_errors:
             raise ParseError(f"No valid events could be parsed from {source}")
-
         # Create and return Mk2Format
         try:
             return Mk2Format(
@@ -464,6 +472,8 @@ class EventParser:
         Returns:
             List of EventSource objects
         """
+        logger.trace("Start")
+        print(sources_data)
         sources = []
 
         if not sources_data:
@@ -489,10 +499,8 @@ class EventParser:
                 continue
 
             try:
-                source = EventSource(
-                    name=source_data.get('name', f'source_{i}'),
-                    description=source_data.get('description', '')
-                )
+                source_id, name = next(iter(source_data.items()))
+                source = EventSource(source_id=source_id, name=name)
                 sources.append(source)
             except ValidationError as e:
                 self.validation_result.add_issue(
@@ -501,7 +509,6 @@ class EventParser:
                     message=f"Invalid source at index {i}: {e}",
                     location=f"sources[{i}]"
                 )
-
         return sources
 
 
@@ -517,6 +524,7 @@ def parse_yaml_file(filepath: str | Path) -> Tuple[FormatObject, ValidationResul
     Raises:
         Various parsing exceptions
     """
+    logger.trace("Start")
     parser = EventParser()
     result = parser.parse_file(filepath)
     return result, parser.validation_result
@@ -535,6 +543,7 @@ def parse_yaml_data(data: Dict[str, Any], source: str = "unknown") -> Tuple[Form
     Raises:
         Various parsing exceptions
     """
+    logger.trace("Start")
     parser = EventParser()
     result = parser.parse_data(data, source)
     return result, parser.validation_result
@@ -552,5 +561,6 @@ def detect_format(data: Dict[str, Any]) -> FormatType:
     Raises:
         FormatDetectionError: If format cannot be detected
     """
+    logger.trace("Start")
     parser = EventParser()
     return parser.detect_format(data)
