@@ -82,8 +82,6 @@ class CheckBoxDelegate(QStyledItemDelegate):
             # Set the checkbox state
             if state == Qt.Checked:
                 checkbox_option.state = QStyle.State_On | QStyle.State_Enabled
-            elif state == Qt.PartiallyChecked:
-                checkbox_option.state = QStyle.State_NoChange | QStyle.State_Enabled
             else:
                 checkbox_option.state = QStyle.State_Off | QStyle.State_Enabled
 
@@ -112,20 +110,18 @@ class CheckBoxDelegate(QStyledItemDelegate):
             return super().editorEvent(event, model, option, index)
         
         if event.type() == QEvent.MouseButtonRelease:
-            # Toggle the checkbox state
+            # Toggle the checkbox state (only two states for row checkboxes)
             current_state = index.data(Qt.UserRole)
-            if current_state == Qt.Unchecked:
-                new_state = Qt.Checked
-            elif current_state == Qt.Checked:
-                new_state = Qt.PartiallyChecked
-            else:
+            # Simple toggle between checked and unchecked only
+            if current_state == Qt.Checked:
                 new_state = Qt.Unchecked
+            else:
+                new_state = Qt.Checked
 
             model.setData(index, new_state, Qt.UserRole)
             return True
 
         return super().editorEvent(event, model, option, index)
-
 
 class ToggleCommand(QUndoCommand):
     """Undo command for single checkbox toggle."""
@@ -178,7 +174,6 @@ class BulkToggleCommand(QUndoCommand):
             if item:
                 item.setData(Qt.UserRole, old_state)
 
-
 class EventSubTab(QWidget):
     """Widget for a single subtab showing events for specific IDs."""
 
@@ -191,6 +186,7 @@ class EventSubTab(QWidget):
         self.events = events
         self.format_type = format_type
         self.undo_stack = QUndoStack(self)
+        self.undo_stack.setUndoLimit(100)  # Set maximum undo levels per spec
         self.header_checkbox = None
         self._setup_ui()
         self._populate_table()
@@ -263,20 +259,28 @@ class EventSubTab(QWidget):
             # Show 128 rows (4 IDs × 32 bits) for each subtab
             num_rows = 128
         else:  # MK2
-            # Show 28 rows (bits 0-27) for each ID
+            # Show ONLY 28 rows (bits 0-27) for each ID
+            # Bits 28-31 are not valid for MK2 format
             num_rows = 28
 
         self.table.setRowCount(num_rows)
 
-        # Fill table with events
+        # Fill table with events - filter out bits 28-31 for MK2
         row = 0
         for key, event in sorted(self.events.items()):
             if row >= num_rows:
                 break
+                
+            # For MK2, skip bits 28-31
+            if self.format_type == FormatType.MK2 and hasattr(event, 'bit'):
+                if event.bit > 27:
+                    logger.warning(f"Skipping MK2 event with bit {event.bit} > 27")
+                    continue
 
             # State checkbox (column 0) - just store the state
             state_item = QTableWidgetItem()
-            state_item.setFlags( (state_item.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable) & ~Qt.ItemIsTristate )
+            # Remove Qt.ItemIsTristate flag - row checkboxes should not be tri-state
+            state_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             state_item.setData(Qt.UserRole, Qt.Unchecked)  # Initial state
             state_item.setText("")  # No text, just checkbox
             self.table.setItem(row, 0, state_item)
@@ -319,12 +323,16 @@ class EventSubTab(QWidget):
 
         # Update header checkbox state
         self._update_header_checkbox()
-    
+
     def _on_header_state_changed(self, state):
         """Handle header checkbox state change."""
         logger.trace("Start")
+        
+        # Only act on user clicks that result in checked or unchecked state
+        # Ignore partial state as it's only for display
         if state == Qt.PartiallyChecked:
-            return  # Don't do anything for partial state
+            # Don't propagate partial state to rows
+            return
         
         # Collect changes for undo
         changes = []
@@ -337,6 +345,7 @@ class EventSubTab(QWidget):
             item = self.table.item(row, 0)
             if item and (item.flags() & Qt.ItemIsEnabled):
                 old_state = item.data(Qt.UserRole)
+                # Only include if state actually changes
                 if old_state != new_state:
                     changes.append((row, old_state, new_state))
         
@@ -344,8 +353,9 @@ class EventSubTab(QWidget):
             description = "Select all" if new_state == Qt.Checked else "Deselect all"
             command = BulkToggleCommand(self.table, changes, description)
             self.undo_stack.push(command)
+            self._update_header_checkbox()  # Update header after changes
             self.selection_changed.emit()
-    
+
     def _on_item_clicked(self, item):
         """Handle item click."""
         logger.trace("Start")
@@ -353,13 +363,11 @@ class EventSubTab(QWidget):
             # Get current state
             old_state = item.data(Qt.UserRole)
 
-            # Calculate new state (cycle through unchecked -> checked -> partial -> unchecked)
-            if old_state == Qt.Unchecked:
-                new_state = Qt.Checked
-            elif old_state == Qt.Checked:
-                new_state = Qt.PartiallyChecked
-            else:
+            # Simple toggle between checked and unchecked (no partial state)
+            if old_state == Qt.Checked:
                 new_state = Qt.Unchecked
+            else:
+                new_state = Qt.Checked
 
             # Create undo command
             command = ToggleCommand(self.table, item.row(), old_state, new_state)

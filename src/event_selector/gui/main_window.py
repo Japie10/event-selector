@@ -689,7 +689,10 @@ class MainWindow(QMainWindow):
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.select_by_info("error")
-            self.statusbar.showMessage(f"Selected {count} error events", 2000)
+            if count > 0:
+                self.statusbar.showMessage(f"Selected {count} error events", 2000)
+            else:
+                self.statusbar.showMessage("No error events found", 2000)
 
     def _unselect_all_errors(self) -> None:
         """Unselect all error events."""
@@ -705,7 +708,10 @@ class MainWindow(QMainWindow):
         current_tab = self.tab_widget.currentWidget()
         if isinstance(current_tab, EventTab):
             count = current_tab.select_by_info_regex(r"(sync|sbs|sws|ebs)")
-            self.statusbar.showMessage(f"Selected {count} sync events", 2000)
+            if count > 0:
+                self.statusbar.showMessage(f"Selected {count} sync events", 2000)
+            else:
+                self.statusbar.showMessage("No sync events found", 2000)
 
     def _unselect_all_syncs(self) -> None:
         """Unselect all sync events."""
