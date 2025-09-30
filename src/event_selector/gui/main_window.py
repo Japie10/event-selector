@@ -398,8 +398,9 @@ class MainWindow(QMainWindow):
             event_tab = EventTab(format_obj, filepath)
             logger.trace("Created event tab object")
             event_tab.selection_changed.connect(self._update_selection_count)
+            event_tab.selection_changed.connect(self._update_ui_state)
             logger.trace("Connected to event tab object")
-            # event_tab.changeEvent..connect(self._on_events_modified)
+            event_tab.events_modified.connect(self._on_events_modified)
 
             # Remove welcome tab if present
             logger.trace("Remove welcome tab")

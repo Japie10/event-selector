@@ -107,13 +107,14 @@ class CheckBoxDelegate(QStyledItemDelegate):
 class ToggleCommand(QUndoCommand):
     """Undo command for single checkbox toggle."""
 
-    def __init__(self, table, row, old_state, new_state):
+    def __init__(self, table, row, old_state, new_state, parent_widget=None):
         super().__init__(f"Toggle row {row}")
         logger.trace("Start")
         self.table = table
         self.row = row
         self.old_state = old_state
         self.new_state = new_state
+        self.parent_widget = parent_widget  # Add this line
 
     def redo(self):
         """Apply the toggle."""
@@ -123,6 +124,9 @@ class ToggleCommand(QUndoCommand):
             item.setData(Qt.UserRole, self.new_state)
             # Force repaint
             self.table.viewport().update()
+            # Update header if parent widget available
+            if self.parent_widget and hasattr(self.parent_widget, '_update_header_checkbox'):
+                self.parent_widget._update_header_checkbox()
 
     def undo(self):
         """Revert the toggle."""
@@ -132,6 +136,9 @@ class ToggleCommand(QUndoCommand):
             item.setData(Qt.UserRole, self.old_state)
             # Force repaint
             self.table.viewport().update()
+            # Update header if parent widget available
+            if self.parent_widget and hasattr(self.parent_widget, '_update_header_checkbox'):
+                self.parent_widget._update_header_checkbox()
 
 class BulkToggleCommand(QUndoCommand):
     """Undo command for bulk toggle operations."""
@@ -181,7 +188,12 @@ class EventSubTab(QWidget):
         self.events = events
         self.format_type = format_type
         self.undo_stack = QUndoStack(self)
-        self.undo_stack.setUndoLimit(100)  # Set maximum undo levels per spec
+        self.undo_stack.setUndoLimit(200)  # Set maximum undo levels per spec
+        
+        # emit selection_changed when undo stack changes
+        self.undo_stack.canUndoChanged.connect(lambda: self.selection_changed.emit())
+        self.undo_stack.canRedoChanged.connect(lambda: self.selection_changed.emit())        
+
         self.header_checkbox = None
         self._setup_ui()
         self._populate_table()
@@ -490,7 +502,7 @@ class EventSubTab(QWidget):
         new_state = Qt.Checked if old_state != Qt.Checked else Qt.Unchecked
         
         # Create undo command
-        command = ToggleCommand(self.table, row, old_state, new_state)
+        command = ToggleCommand(self.table, row, old_state, new_state, self)
         self.undo_stack.push(command)
         
         # Update header checkbox
@@ -579,7 +591,7 @@ class EventSubTab(QWidget):
                         logger.trace(f"Toggling row {current_row}: {old_state} -> {new_state}")
                         
                         # Create undo command for single row
-                        command = ToggleCommand(self.table, current_row, old_state, new_state)
+                        command = ToggleCommand(self.table, current_row, old_state, new_state, self)
                         self.undo_stack.push(command)
                         
                         # Update header checkbox
@@ -598,6 +610,7 @@ class EventTab(QWidget):
     """Main tab widget for a YAML file."""
 
     selection_changed = pyqtSignal()
+    events_modified = pyqtSignal()
 
     def __init__(self, format_obj: FormatObject, yaml_file: Path,parent=None):
         super().__init__(parent)
@@ -615,6 +628,8 @@ class EventTab(QWidget):
         # Connect selection changed signals
         for subtab in self.subtabs.values():
             subtab.selection_changed.connect(self._on_selection_changed)
+        
+        self.subtab_widget.currentChanged.connect(lambda: self.selection_changed.emit())
 
         # Initialize separate storage for mask and trigger modes
         size = 12 if self.format_type == FormatType.MK1 else 16
@@ -840,7 +855,7 @@ class EventTab(QWidget):
                         changes.append((row, old_state, Qt.Checked))
 
             if changes:
-                command = BulkToggleCommand(current_subtab.table, changes, "Select all")
+                command = BulkToggleCommand(current_subtab.table, changes, "Select all", current_subtab)
                 current_subtab.undo_stack.push(command)
                 self.selection_changed.emit()
 
@@ -858,7 +873,7 @@ class EventTab(QWidget):
                         changes.append((row, old_state, Qt.Unchecked))
 
             if changes:
-                command = BulkToggleCommand(current_subtab.table, changes, "Deselect all")
+                command = BulkToggleCommand(current_subtab.table, changes, "Deselect all", current_subtab)
                 current_subtab.undo_stack.push(command)
                 self.selection_changed.emit()
 
@@ -885,7 +900,7 @@ class EventTab(QWidget):
                         count += 1
 
         if changes:
-            command = BulkToggleCommand(current_subtab.table, changes, f"Select {pattern}")
+            command = BulkToggleCommand(current_subtab.table, changes, f"Select {pattern}", current_subtab)
             current_subtab.undo_stack.push(command)
             self.selection_changed.emit()
 
@@ -914,7 +929,7 @@ class EventTab(QWidget):
                         count += 1
 
         if changes:
-            command = BulkToggleCommand(current_subtab.table, changes, f"Unselect {pattern}")
+            command = BulkToggleCommand(current_subtab.table, changes, f"Unselect {pattern}", current_subtab)
             current_subtab.undo_stack.push(command)
             self.selection_changed.emit()
 
@@ -947,7 +962,7 @@ class EventTab(QWidget):
                         count += 1
 
         if changes:
-            command = BulkToggleCommand(current_subtab.table, changes, "Select syncs")
+            command = BulkToggleCommand(current_subtab.table, changes, "Select syncs", current_subtab)
             current_subtab.undo_stack.push(command)
             self.selection_changed.emit()
 
@@ -980,7 +995,7 @@ class EventTab(QWidget):
                         count += 1
 
         if changes:
-            command = BulkToggleCommand(current_subtab.table, changes, "Unselect syncs")
+            command = BulkToggleCommand(current_subtab.table, changes, "Unselect syncs", current_subtab)
             current_subtab.undo_stack.push(command)
             self.selection_changed.emit()
 
