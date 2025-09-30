@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QHeaderView, QLabel, QLineEdit, QPushButton,
     QCheckBox, QUndoStack, QUndoCommand, QAbstractItemView,
     QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication,
-    QStyleOptionViewItem
+    QStyleOptionViewItem, QTabBar, QStyleOptionTab
 )
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRect, QModelIndex, QEvent, QPoint
@@ -121,11 +121,6 @@ class ToggleCommand(QUndoCommand):
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.new_state)
-            # Update visual selection
-            for col in range(self.table.columnCount()):
-                cell_item = self.table.item(self.row, col)
-                if cell_item:
-                    cell_item.setSelected(self.new_state == Qt.Checked)
             # Force repaint
             self.table.viewport().update()
 
@@ -135,11 +130,6 @@ class ToggleCommand(QUndoCommand):
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.old_state)
-            # Update visual selection
-            for col in range(self.table.columnCount()):
-                cell_item = self.table.item(self.row, col)
-                if cell_item:
-                    cell_item.setSelected(self.old_state == Qt.Checked)
             # Force repaint
             self.table.viewport().update()
 
@@ -160,11 +150,6 @@ class BulkToggleCommand(QUndoCommand):
             item = self.table.item(row, 0)
             if item:
                 item.setData(Qt.UserRole, new_state)
-                # Update visual selection
-                for col in range(self.table.columnCount()):
-                    cell_item = self.table.item(row, col)
-                    if cell_item:
-                        cell_item.setSelected(new_state == Qt.Checked)
         # Force repaint
         self.table.viewport().update()
         # Update header if parent widget available
@@ -178,11 +163,6 @@ class BulkToggleCommand(QUndoCommand):
             item = self.table.item(row, 0)
             if item:
                 item.setData(Qt.UserRole, old_state)
-                # Update visual selection
-                for col in range(self.table.columnCount()):
-                    cell_item = self.table.item(row, col)
-                    if cell_item:
-                        cell_item.setSelected(old_state == Qt.Checked)
         # Force repaint
         self.table.viewport().update()
         # Update header if parent widget available
@@ -258,6 +238,9 @@ class EventSubTab(QWidget):
         # Enable mouse tracking for hover effects
         self.table.setMouseTracking(True)
 
+        # Install event filter to capture Space key
+        self.table.installEventFilter(self)
+
         # Create tri-state header checkbox
         self.header_checkbox = editorEven()
         self.header_checkbox.state_changed.connect(self._on_header_state_changed)
@@ -270,7 +253,7 @@ class EventSubTab(QWidget):
         
         # Position header checkbox
         self.header_checkbox.setParent(header.viewport())
-        checkbox_x = (60 - self.header_checkbox.sizeHint().width()) // 2
+        checkbox_x = (40 - self.header_checkbox.sizeHint().width()) // 2 - 1
         self.header_checkbox.move(checkbox_x, 3)
 
         # Set checkbox delegate for painting only
@@ -282,9 +265,6 @@ class EventSubTab(QWidget):
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setGridStyle(Qt.SolidLine)
-        
-        # IMPORTANT: Allow multi-selection for visual feedback
-        self.table.setSelectionMode(QAbstractItemView.MultiSelection)
         
         # Style for better visual feedback
         self.table.setStyleSheet("""
@@ -304,11 +284,11 @@ class EventSubTab(QWidget):
         """)
 
         # Set column widths
-        header.resizeSection(0, 60)   # State column
-        header.resizeSection(1, 100)  # ID/Addr
+        header.resizeSection(0, 40)   # State column
+        header.resizeSection(1, 80)  # ID/Addr
         header.resizeSection(2, 50)   # Bit
-        header.resizeSection(3, 150)  # Event Source
-        header.resizeSection(4, 250)  # Description
+        header.resizeSection(3, 250)  # Event Source
+        header.resizeSection(4, 700)  # Description
         header.setStretchLastSection(True)  # Info stretches
 
         # Add tooltips to header
@@ -513,21 +493,11 @@ class EventSubTab(QWidget):
         command = ToggleCommand(self.table, row, old_state, new_state)
         self.undo_stack.push(command)
         
-        # Update visual selection to match checkbox state
-        self._update_row_selection(row, new_state == Qt.Checked)
-        
         # Update header checkbox
         self._update_header_checkbox()
         
         # Emit selection changed
         self.selection_changed.emit()
-
-    def _update_row_selection(self, row: int, selected: bool):
-        """Update row's visual selection to match its checkbox state."""
-        for col in range(self.table.columnCount()):
-            item = self.table.item(row, col)
-            if item:
-                item.setSelected(selected)
 
     def _on_selection_changed(self):
         """Keep visual selection in sync with checkbox states."""
@@ -587,6 +557,43 @@ class EventSubTab(QWidget):
         # Update header after setting mask
         self._update_header_checkbox()
 
+    def eventFilter(self, obj, event):
+        """Filter events from the table widget to handle Space key."""
+        if obj == self.table and event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Space:
+                logger.trace("Space key pressed")
+                
+                # Get the current row (where keyboard focus is)
+                current_row = self.table.currentRow()
+                logger.trace(f"Current row: {current_row}")
+                
+                if current_row >= 0:
+                    checkbox_item = self.table.item(current_row, 0)
+                    
+                    # Check if row is enabled
+                    if checkbox_item and (checkbox_item.flags() & Qt.ItemIsEnabled):
+                        # Get current state and toggle it
+                        old_state = checkbox_item.data(Qt.UserRole)
+                        new_state = Qt.Checked if old_state != Qt.Checked else Qt.Unchecked
+                        
+                        logger.trace(f"Toggling row {current_row}: {old_state} -> {new_state}")
+                        
+                        # Create undo command for single row
+                        command = ToggleCommand(self.table, current_row, old_state, new_state)
+                        self.undo_stack.push(command)
+                        
+                        # Update header checkbox
+                        self._update_header_checkbox()
+                        
+                        # Emit selection changed
+                        self.selection_changed.emit()
+                
+                # Always consume Space key events to prevent default behavior
+                return True
+        
+        # Pass all other events to the base class
+        return super().eventFilter(obj, event)
+
 class EventTab(QWidget):
     """Main tab widget for a YAML file."""
 
@@ -609,6 +616,11 @@ class EventTab(QWidget):
         for subtab in self.subtabs.values():
             subtab.selection_changed.connect(self._on_selection_changed)
 
+        # Initialize separate storage for mask and trigger modes
+        size = 12 if self.format_type == FormatType.MK1 else 16
+        self.mask_array = np.zeros(size, dtype=np.uint32)  # Event-Mask storage
+        self.trigger_array = np.zeros(size, dtype=np.uint32)  # Capture-Mask storage
+
     def _setup_ui(self):
         """Setup main tab UI."""
         logger.trace("Start")
@@ -622,6 +634,8 @@ class EventTab(QWidget):
 
         # Subtab widget
         self.subtab_widget = QTabWidget()
+        self.subtab_widget.tabBar().setElideMode(Qt.ElideRight)
+        self.subtab_widget.tabBar().setExpanding(False)
         layout.addWidget(self.subtab_widget)
 
     def _create_subtabs(self):
@@ -643,6 +657,7 @@ class EventTab(QWidget):
                 subtab = EventSubTab(name, subtab_events, self.format_type, self)
                 self.subtabs[name] = subtab
                 self.subtab_widget.addTab(subtab, name)
+                self.subtab_widget.setTabToolTip(i, name)
         else:  # MK2
             # Create one subtab per ID
             for id_num in range(16):
@@ -654,13 +669,14 @@ class EventTab(QWidget):
 
                 # Determine subtab name
                 if hasattr(self.format_obj, 'id_names') and id_num in self.format_obj.id_names:
-                    name = f"{self.format_obj.id_names[id_num]} (0x{id_num:01X})"
+                    name = f"0x{id_num:01X}: {self.format_obj.id_names[id_num]})"
                 else:
                     name = f"ID 0x{id_num:01X}"
 
                 subtab = EventSubTab(name, subtab_events, self.format_type, self)
                 self.subtabs[name] = subtab
                 self.subtab_widget.addTab(subtab, name)
+                self.subtab_widget.setTabToolTip(id_num, name)
 
     def _on_selection_changed(self):
         """Handle selection change in any subtab."""
@@ -745,8 +761,37 @@ class EventTab(QWidget):
     def set_mode(self, mode: MaskMode):
         """Set the mask mode (Event-Mask or Capture-Mask)."""
         logger.trace("Start")
+        
+        # Save current checkbox states to the current mode's array
+        if self.mode == MaskMode.MASK:
+            self.mask_array = self.get_current_mask()
+        else:
+            self.trigger_array = self.get_current_mask()
+        
+        # Switch mode
         self.mode = mode
-        # Mode affects which mask array is used but display remains the same
+        
+        # Load checkbox states from the target mode's array
+        if self.mode == MaskMode.MASK:
+            self._apply_mask_to_checkboxes(self.mask_array)
+        else:
+            self._apply_mask_to_checkboxes(self.trigger_array)
+
+    def _apply_mask_to_checkboxes(self, mask: np.ndarray):
+        """Apply mask array to all subtab checkboxes."""
+        if isinstance(self.format_obj, Mk1Format):
+            mapping = {
+                "Data": mask[0:4],
+                "Network": mask[4:8],
+                "Application": mask[8:12]
+            }
+            for subtab_name, subtab_mask in mapping.items():
+                if subtab_name in self.subtabs:
+                    self.subtabs[subtab_name].set_mask_array(subtab_mask)
+        else:  # Mk2Format
+            for i, subtab in enumerate(self.subtabs.values()):
+                if i < len(mask):
+                    subtab.set_mask_array(mask[i:i+1])
 
     def has_unsaved_changes(self) -> bool:
         """Check if there are unsaved changes."""

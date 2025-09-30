@@ -83,11 +83,8 @@ class StrictModel(BaseModel):
 
 class EventSource(StrictModel):
     """Event source definition."""
-    print ("test0")
     source_id: str = Field(..., min_length=1, max_length=2)
     name: str = Field(..., min_length=1, max_length=500)
-    print (source_id)
-    print (name)
     @field_validator('source_id')
     @classmethod
     def validate_source_id(cls, v: str) -> str:

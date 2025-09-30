@@ -286,6 +286,15 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addAction(self.undo_action)
         toolbar.addAction(self.redo_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.select_all_action)
+        toolbar.addAction(self.select_none_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.select_errors_action)
+        toolbar.addAction(self.unselect_errors_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.select_syncs_action)
+        toolbar.addAction(self.unselect_syncs_action)
 
     def _setup_dock_widgets(self) -> None:
         """Setup dock widgets."""
