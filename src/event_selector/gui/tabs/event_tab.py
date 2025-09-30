@@ -15,7 +15,8 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication,
     QStyleOptionViewItem
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QRect, QModelIndex, QEvent
+
+from PyQt5.QtCore import Qt, pyqtSignal, QRect, QModelIndex, QEvent, QPoint
 from PyQt5.QtGui import QPainter
 
 import numpy as np
@@ -31,7 +32,7 @@ logger = get_logger(__name__)
 FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 
-class TriStateHeaderCheckBox(QCheckBox):
+class editorEven(QCheckBox):
     """Tri-state checkbox for header that reflects and controls all rows."""
     
     state_changed = pyqtSignal(int)
@@ -59,7 +60,6 @@ class TriStateHeaderCheckBox(QCheckBox):
         else:
             self.setCheckState(Qt.PartiallyChecked)
 
-
 class CheckBoxDelegate(QStyledItemDelegate):
     """Delegate for rendering checkboxes in the first column."""
 
@@ -68,8 +68,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         """Paint checkbox in cell."""
-        logger.trace("Start")
-        if index.column() == 0:  # Only for first column
+        if index.column() == 0:
             # Get the checkbox state from the item
             state = index.data(Qt.UserRole)
             if state is None:
@@ -85,6 +84,10 @@ class CheckBoxDelegate(QStyledItemDelegate):
             else:
                 checkbox_option.state = QStyle.State_Off | QStyle.State_Enabled
 
+            # Add hover effect when row is selected or hovered
+            if option.state & QStyle.State_Selected:
+                checkbox_option.state |= QStyle.State_MouseOver
+
             # Check if item is enabled
             if not (index.flags() & Qt.ItemIsEnabled):
                 checkbox_option.state &= ~QStyle.State_Enabled
@@ -92,36 +95,14 @@ class CheckBoxDelegate(QStyledItemDelegate):
             # Draw the checkbox
             QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_option, painter)
         else:
-            # For other columns, use default painting
             super().paint(painter, option, index)
 
     def get_checkbox_rect(self, cell_rect: QRect) -> QRect:
         """Calculate checkbox position (centered in cell)."""
-        logger.trace("Start")
         checkbox_size = QApplication.style().pixelMetric(QStyle.PM_IndicatorWidth)
         x = cell_rect.center().x() - checkbox_size // 2
         y = cell_rect.center().y() - checkbox_size // 2
         return QRect(x, y, checkbox_size, checkbox_size)
-
-    def editorEvent(self, event: QEvent, model, option: QStyleOptionViewItem, index: QModelIndex) -> bool:
-        """Handle mouse clicks on checkbox."""
-        logger.trace("Start")
-        if index.column() != 0:
-            return super().editorEvent(event, model, option, index)
-        
-        if event.type() == QEvent.MouseButtonRelease:
-            # Toggle the checkbox state (only two states for row checkboxes)
-            current_state = index.data(Qt.UserRole)
-            # Simple toggle between checked and unchecked only
-            if current_state == Qt.Checked:
-                new_state = Qt.Unchecked
-            else:
-                new_state = Qt.Checked
-
-            model.setData(index, new_state, Qt.UserRole)
-            return True
-
-        return super().editorEvent(event, model, option, index)
 
 class ToggleCommand(QUndoCommand):
     """Undo command for single checkbox toggle."""
@@ -140,6 +121,13 @@ class ToggleCommand(QUndoCommand):
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.new_state)
+            # Update visual selection
+            for col in range(self.table.columnCount()):
+                cell_item = self.table.item(self.row, col)
+                if cell_item:
+                    cell_item.setSelected(self.new_state == Qt.Checked)
+            # Force repaint
+            self.table.viewport().update()
 
     def undo(self):
         """Revert the toggle."""
@@ -147,16 +135,23 @@ class ToggleCommand(QUndoCommand):
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.old_state)
-
+            # Update visual selection
+            for col in range(self.table.columnCount()):
+                cell_item = self.table.item(self.row, col)
+                if cell_item:
+                    cell_item.setSelected(self.old_state == Qt.Checked)
+            # Force repaint
+            self.table.viewport().update()
 
 class BulkToggleCommand(QUndoCommand):
     """Undo command for bulk toggle operations."""
 
-    def __init__(self, table, changes, description="Bulk toggle"):
+    def __init__(self, table, changes, description="Bulk toggle", parent_widget=None):
         super().__init__(description)
         logger.trace("Start")
         self.table = table
-        self.changes = changes  # List of (row, old_state, new_state)
+        self.changes = changes
+        self.parent_widget = parent_widget
 
     def redo(self):
         """Apply all toggles."""
@@ -165,6 +160,16 @@ class BulkToggleCommand(QUndoCommand):
             item = self.table.item(row, 0)
             if item:
                 item.setData(Qt.UserRole, new_state)
+                # Update visual selection
+                for col in range(self.table.columnCount()):
+                    cell_item = self.table.item(row, col)
+                    if cell_item:
+                        cell_item.setSelected(new_state == Qt.Checked)
+        # Force repaint
+        self.table.viewport().update()
+        # Update header if parent widget available
+        if self.parent_widget and hasattr(self.parent_widget, '_update_header_checkbox'):
+            self.parent_widget._update_header_checkbox()
 
     def undo(self):
         """Revert all toggles."""
@@ -173,6 +178,16 @@ class BulkToggleCommand(QUndoCommand):
             item = self.table.item(row, 0)
             if item:
                 item.setData(Qt.UserRole, old_state)
+                # Update visual selection
+                for col in range(self.table.columnCount()):
+                    cell_item = self.table.item(row, col)
+                    if cell_item:
+                        cell_item.setSelected(old_state == Qt.Checked)
+        # Force repaint
+        self.table.viewport().update()
+        # Update header if parent widget available
+        if self.parent_widget and hasattr(self.parent_widget, '_update_header_checkbox'):
+            self.parent_widget._update_header_checkbox()
 
 class EventSubTab(QWidget):
     """Widget for a single subtab showing events for specific IDs."""
@@ -192,22 +207,32 @@ class EventSubTab(QWidget):
         self._populate_table()
 
     def _setup_ui(self):
-        """Setup subtab UI."""
+        """Setup subtab UI with row click handling."""
         logger.trace("Start")
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
 
         # Filter bar
         filter_layout = QHBoxLayout()
-        filter_layout.addWidget(QLabel("Filter:"))
+        filter_label = QLabel("Filter:")
+        filter_label.setStyleSheet("font-weight: bold;")
+        filter_layout.addWidget(filter_label)
 
         self.filter_input = QLineEdit()
         self.filter_input.setPlaceholderText("Type to filter events...")
+        self.filter_input.setClearButtonEnabled(True)
         self.filter_input.textChanged.connect(self._apply_filter)
         filter_layout.addWidget(self.filter_input)
 
-        self.clear_filter_button = QPushButton("Clear")
+        self.clear_filter_button = QPushButton("Clear Filter")
+        self.clear_filter_button.setEnabled(False)
         self.clear_filter_button.clicked.connect(self._clear_filter)
         filter_layout.addWidget(self.clear_filter_button)
+        
+        # Enable/disable clear button based on filter text
+        self.filter_input.textChanged.connect(
+            lambda text: self.clear_filter_button.setEnabled(bool(text))
+        )
 
         layout.addLayout(filter_layout)
 
@@ -218,54 +243,103 @@ class EventSubTab(QWidget):
             "State", "ID/Addr", "Bit", "Event Source", "Description", "Info"
         ])
 
-        # Create tri-state header checkbox for first column
-        self.header_checkbox = TriStateHeaderCheckBox()
-        self.header_checkbox.state_changed.connect(self._on_header_state_changed)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.table.setHorizontalHeaderItem(0, QTableWidgetItem())
+        # Hide row numbers (vertical header)
+        self.table.verticalHeader().setVisible(False)
+        
+        # Set default row height (reduced from default ~30 to 22 pixels)
+        self.table.verticalHeader().setDefaultSectionSize(22)
+        
+        # Set minimum row height to prevent them from being too small
+        self.table.verticalHeader().setMinimumSectionSize(20)
+    
+        # Make row height fixed (prevents resizing)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
 
-        # Place the checkbox in the header
+        # Enable mouse tracking for hover effects
+        self.table.setMouseTracking(True)
+
+        # Create tri-state header checkbox
+        self.header_checkbox = editorEven()
+        self.header_checkbox.state_changed.connect(self._on_header_state_changed)
+        
+        # Configure header
         header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Fixed)
         header_item = QTableWidgetItem()
         self.table.setHorizontalHeaderItem(0, header_item)
-        self.header_checkbox.setParent(self.table.horizontalHeader().viewport())
-        self.header_checkbox.setGeometry(20, 3, 20, 20)  # Position in header
+        
+        # Position header checkbox
+        self.header_checkbox.setParent(header.viewport())
+        checkbox_x = (60 - self.header_checkbox.sizeHint().width()) // 2
+        self.header_checkbox.move(checkbox_x, 3)
 
-        # Set checkbox delegate for first column only
+        # Set checkbox delegate for painting only
         self.checkbox_delegate = CheckBoxDelegate()
         self.table.setItemDelegateForColumn(0, self.checkbox_delegate)
 
-        # Configure table
+        # Configure table behavior
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setGridStyle(Qt.SolidLine)
+        
+        # IMPORTANT: Allow multi-selection for visual feedback
+        self.table.setSelectionMode(QAbstractItemView.MultiSelection)
+        
+        # Style for better visual feedback
+        self.table.setStyleSheet("""
+            QTableWidget {
+                gridline-color: #d0d0d0;
+            }
+            QTableWidget::item {
+                padding: 0px;
+                margin: 0px;
+            }
+            QTableWidget::item:selected {
+                background-color: rgba(51, 153, 255, 40);
+            }
+            QTableWidget::item:hover {
+                background-color: rgba(0, 0, 0, 10);
+            }
+        """)
 
         # Set column widths
-        header.resizeSection(0, 60)  # State column
-        header.resizeSection(1, 80)  # ID/Addr
-        header.resizeSection(2, 50)  # Bit
-        header.setStretchLastSection(True)
+        header.resizeSection(0, 60)   # State column
+        header.resizeSection(1, 100)  # ID/Addr
+        header.resizeSection(2, 50)   # Bit
+        header.resizeSection(3, 150)  # Event Source
+        header.resizeSection(4, 250)  # Description
+        header.setStretchLastSection(True)  # Info stretches
 
-        # Connect signals
-        self.table.itemClicked.connect(self._on_item_clicked)
+        # Add tooltips to header
+        self.table.horizontalHeaderItem(0).setToolTip("Click rows to toggle selection")
+        self.table.horizontalHeaderItem(1).setToolTip("Event ID or Address")
+        self.table.horizontalHeaderItem(2).setToolTip("Bit number")
+
+        # Connect row click handler - clicking ANYWHERE on the row toggles checkbox
+        self.table.itemClicked.connect(self._on_row_clicked)
+        
+        # Connect selection change for visual feedback
+        self.table.itemSelectionChanged.connect(self._on_selection_changed)
 
         layout.addWidget(self.table)
 
     def _populate_table(self):
         """Populate table with events."""
         logger.trace("Start")
+        
         # Calculate number of rows based on format
         if self.format_type == FormatType.MK1:
-            # Show 128 rows (4 IDs × 32 bits) for each subtab
             num_rows = 128
         else:  # MK2
-            # Show ONLY 28 rows (bits 0-27) for each ID
-            # Bits 28-31 are not valid for MK2 format
             num_rows = 28
 
         self.table.setRowCount(num_rows)
 
-        # Fill table with events - filter out bits 28-31 for MK2
+        # Temporarily disable signals during population
+        self.table.blockSignals(True)
+
+        # Fill table with events
         row = 0
         for key, event in sorted(self.events.items()):
             if row >= num_rows:
@@ -277,49 +351,67 @@ class EventSubTab(QWidget):
                     logger.warning(f"Skipping MK2 event with bit {event.bit} > 27")
                     continue
 
-            # State checkbox (column 0) - just store the state
+            # State checkbox (column 0)
             state_item = QTableWidgetItem()
-            # Remove Qt.ItemIsTristate flag - row checkboxes should not be tri-state
             state_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-            state_item.setData(Qt.UserRole, Qt.Unchecked)  # Initial state
-            state_item.setText("")  # No text, just checkbox
+            state_item.setData(Qt.UserRole, Qt.Unchecked)
+            state_item.setText("")
             self.table.setItem(row, 0, state_item)
 
             # ID/Address (column 1)
             if self.format_type == FormatType.MK1:
-                self.table.setItem(row, 1, QTableWidgetItem(event.address))
-                self.table.setItem(row, 2, QTableWidgetItem(str(event.bit)))
+                addr_item = QTableWidgetItem(event.address)
+                addr_item.setToolTip(f"Address: {event.address}")
+                self.table.setItem(row, 1, addr_item)
+                
+                bit_item = QTableWidgetItem(str(event.bit))
+                self.table.setItem(row, 2, bit_item)
             else:  # EventMk2
-                self.table.setItem(row, 1, QTableWidgetItem(f"0x{event.id:01X}{event.bit:02X}"))
-                self.table.setItem(row, 2, QTableWidgetItem(str(event.bit)))
+                addr_text = f"0x{event.id:01X}{event.bit:02X}"
+                addr_item = QTableWidgetItem(addr_text)
+                addr_item.setToolTip(f"ID: 0x{event.id:01X}, Bit: {event.bit}")
+                self.table.setItem(row, 1, addr_item)
+                
+                bit_item = QTableWidgetItem(str(event.bit))
+                self.table.setItem(row, 2, bit_item)
 
             # Event source (column 3)
-            self.table.setItem(row, 3, QTableWidgetItem(event.event_source))
+            source_item = QTableWidgetItem(event.event_source)
+            if len(event.event_source) > 20:
+                source_item.setToolTip(event.event_source)
+            self.table.setItem(row, 3, source_item)
 
             # Description (column 4)
-            self.table.setItem(row, 4, QTableWidgetItem(event.description))
+            desc_item = QTableWidgetItem(event.description)
+            if len(event.description) > 30:
+                desc_item.setToolTip(event.description)
+            self.table.setItem(row, 4, desc_item)
 
             # Info (column 5)
-            self.table.setItem(row, 5, QTableWidgetItem(event.info))
+            info_item = QTableWidgetItem(event.info)
+            if len(event.info) > 30:
+                info_item.setToolTip(event.info)
+            self.table.setItem(row, 5, info_item)
 
             row += 1
 
-        # Fill remaining rows with empty entries (if any)
+        # Fill remaining rows with empty disabled entries
         while row < num_rows:
-            # Empty state checkbox (disabled)
             state_item = QTableWidgetItem()
             state_item.setData(Qt.UserRole, Qt.Unchecked)
-            state_item.setFlags(state_item.flags() & ~Qt.ItemIsEnabled)
+            state_item.setFlags(Qt.NoItemFlags)
             state_item.setText("")
             self.table.setItem(row, 0, state_item)
 
-            # Disabled empty cells
             for col in range(1, 6):
                 item = QTableWidgetItem("")
-                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+                item.setFlags(Qt.NoItemFlags)
                 self.table.setItem(row, col, item)
 
             row += 1
+
+        # Re-enable signals
+        self.table.blockSignals(False)
 
         # Update header checkbox state
         self._update_header_checkbox()
@@ -328,10 +420,7 @@ class EventSubTab(QWidget):
         """Handle header checkbox state change."""
         logger.trace("Start")
         
-        # Only act on user clicks that result in checked or unchecked state
-        # Ignore partial state as it's only for display
         if state == Qt.PartiallyChecked:
-            # Don't propagate partial state to rows
             return
         
         # Collect changes for undo
@@ -345,38 +434,15 @@ class EventSubTab(QWidget):
             item = self.table.item(row, 0)
             if item and (item.flags() & Qt.ItemIsEnabled):
                 old_state = item.data(Qt.UserRole)
-                # Only include if state actually changes
                 if old_state != new_state:
                     changes.append((row, old_state, new_state))
         
         if changes:
             description = "Select all" if new_state == Qt.Checked else "Deselect all"
-            command = BulkToggleCommand(self.table, changes, description)
+            command = BulkToggleCommand(self.table, changes, description, self)
             self.undo_stack.push(command)
-            self._update_header_checkbox()  # Update header after changes
-            self.selection_changed.emit()
-
-    def _on_item_clicked(self, item):
-        """Handle item click."""
-        logger.trace("Start")
-        if item.column() == 0:  # Checkbox column
-            # Get current state
-            old_state = item.data(Qt.UserRole)
-
-            # Simple toggle between checked and unchecked (no partial state)
-            if old_state == Qt.Checked:
-                new_state = Qt.Unchecked
-            else:
-                new_state = Qt.Checked
-
-            # Create undo command
-            command = ToggleCommand(self.table, item.row(), old_state, new_state)
-            self.undo_stack.push(command)
-
-            # Update header checkbox
             self._update_header_checkbox()
-
-        self.selection_changed.emit()
+            self.selection_changed.emit()
 
     def _update_header_checkbox(self):
         """Update header checkbox based on row states."""
@@ -424,6 +490,49 @@ class EventSubTab(QWidget):
 
         # Update header checkbox after filtering
         self._update_header_checkbox()
+
+    def _on_row_clicked(self, item):
+        """Handle clicking anywhere on a row to toggle its checkbox."""
+        logger.trace("Start")
+        
+        # Get the checkbox item for this row
+        row = item.row()
+        checkbox_item = self.table.item(row, 0)
+        
+        # Check if row is enabled
+        if not checkbox_item or not (checkbox_item.flags() & Qt.ItemIsEnabled):
+            return
+        
+        # Get current state
+        old_state = checkbox_item.data(Qt.UserRole)
+        
+        # Toggle state
+        new_state = Qt.Checked if old_state != Qt.Checked else Qt.Unchecked
+        
+        # Create undo command
+        command = ToggleCommand(self.table, row, old_state, new_state)
+        self.undo_stack.push(command)
+        
+        # Update visual selection to match checkbox state
+        self._update_row_selection(row, new_state == Qt.Checked)
+        
+        # Update header checkbox
+        self._update_header_checkbox()
+        
+        # Emit selection changed
+        self.selection_changed.emit()
+
+    def _update_row_selection(self, row: int, selected: bool):
+        """Update row's visual selection to match its checkbox state."""
+        for col in range(self.table.columnCount()):
+            item = self.table.item(row, col)
+            if item:
+                item.setSelected(selected)
+
+    def _on_selection_changed(self):
+        """Keep visual selection in sync with checkbox states."""
+        # This prevents selection from getting out of sync
+        pass
 
     def _clear_filter(self):
         """Clear filter input."""
