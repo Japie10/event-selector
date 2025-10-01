@@ -23,13 +23,12 @@ import numpy as np
 
 from event_selector.core.models import (
     FormatType, MaskMode, Mk1Format, Mk2Format, 
-    EventMk1, EventMk2, MaskData
+    EventMk1, EventMk2, MaskData, BaseFormat
 )
 from event_selector.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 
 class editorEven(QCheckBox):
@@ -612,14 +611,14 @@ class EventTab(QWidget):
     selection_changed = pyqtSignal()
     events_modified = pyqtSignal()
 
-    def __init__(self, format_obj: FormatObject, yaml_file: Path,parent=None):
+    def __init__(self, format_obj: BaseFormat, yaml_file: Path,parent=None):
         super().__init__(parent)
         self.filepath = yaml_file
         self.format_obj = format_obj
         self.format_type = format_obj.format_type
 
         self.subtabs = {}
-        self.mode = MaskMode.MASK
+        self.mode = MaskMode.EVENT
         self.unsaved_changes = False
         self._setup_ui()
         self._create_subtabs()
@@ -778,7 +777,7 @@ class EventTab(QWidget):
         logger.trace("Entering {function_name}", function_name=__name__)
         
         # Save current checkbox states to the current mode's array
-        if self.mode == MaskMode.MASK:
+        if self.mode == MaskMode.EVENT:
             self.mask_array = self.get_current_mask()
         else:
             self.trigger_array = self.get_current_mask()
@@ -787,7 +786,7 @@ class EventTab(QWidget):
         self.mode = mode
         
         # Load checkbox states from the target mode's array
-        if self.mode == MaskMode.MASK:
+        if self.mode == MaskMode.EVENT:
             self._apply_mask_to_checkboxes(self.mask_array)
         else:
             self._apply_mask_to_checkboxes(self.trigger_array)

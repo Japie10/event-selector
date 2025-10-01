@@ -27,11 +27,11 @@ from event_selector.core.models import (
     MK2_MAX_ID,
     MK2_MAX_BIT,
     MK2_BIT_MASK,
+    BaseFormat
 )
 from event_selector.utils.logging import get_logger
 
 logger = get_logger(__name__)
-FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 class Validator:
     """Comprehensive validator for event formats and masks."""
@@ -167,7 +167,7 @@ class Validator:
 
     def validate_mask_compatibility(self,
                                    mask_data: MaskData,
-                                   format_obj: FormatObject) -> ValidationResult:
+                                   format_obj: BaseFormat) -> ValidationResult:
         """Validate that mask is compatible with format definition.
 
         Args:
@@ -509,7 +509,7 @@ class Validator:
                         )
 
 
-def validate_format(format_obj: FormatObject) -> ValidationResult:
+def validate_format(format_obj: BaseFormat) -> ValidationResult:
     """Convenience function to validate a format object.
 
     Args:

@@ -8,6 +8,7 @@ and comprehensive validation.
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypeAlias
+from event_selector.core.models import BaseFormat
 from enum import Enum
 
 import yaml
@@ -29,8 +30,6 @@ from event_selector.core.models import (
 from event_selector.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 
 class ParseError(Exception):
@@ -69,7 +68,7 @@ class EventParser:
         self.sources: List[EventSource] = []
         self.events: Dict[str, EventMk1 | EventMk2] = {}
 
-    def parse_file(self, filepath: str | Path) -> FormatObject:
+    def parse_file(self, filepath: str | Path) -> BaseFormat:
         """Parse YAML file and return appropriate format object.
 
         Args:
