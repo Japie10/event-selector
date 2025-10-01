@@ -21,6 +21,9 @@ from event_selector.core.models import (
     MK2_BIT_MASK,
 )
 from event_selector.core.exporter import parse_metadata_header
+from event_selector.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ImportError(Exception):
@@ -40,11 +43,13 @@ class Importer:
 
     def __init__(self):
         """Initialize importer."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.validation_result = ValidationResult()
         self._reset_state()
 
     def _reset_state(self) -> None:
         """Reset importer state."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.validation_result = ValidationResult()
         self.metadata: Optional[Dict[str, Any]] = None
         self.format_type: Optional[FormatType] = None
@@ -65,6 +70,7 @@ class Importer:
         Raises:
             ImportError: If import fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         filepath = Path(filepath)
 
         if not filepath.exists():
@@ -90,6 +96,7 @@ class Importer:
         Raises:
             ImportError: If import fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
 
         # Parse metadata header if present
@@ -136,6 +143,7 @@ class Importer:
         Raises:
             ImportError: If format cannot be detected
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         filepath = Path(filepath)
 
         if not filepath.exists():
@@ -188,6 +196,7 @@ class Importer:
 
     def _extract_metadata_info(self) -> None:
         """Extract format information from metadata."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         if not self.metadata:
             return
 
@@ -247,6 +256,7 @@ class Importer:
         Returns:
             Detected file format
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         if not data_lines:
             return FileFormat.UNKNOWN
 
@@ -280,6 +290,7 @@ class Importer:
         Raises:
             ImportError: If parsing fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Determine format type from line count if not already known
         if self.format_type is None:
             if len(data_lines) == 12:
@@ -408,6 +419,7 @@ class Importer:
         Raises:
             ImportError: If parsing fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Format B is always MK2
         self.format_type = FormatType.MK2
 
@@ -535,6 +547,7 @@ class Importer:
 
     def _create_export_metadata(self) -> Any:
         """Create ExportMetadata from parsed metadata."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         from event_selector.core.models import ExportMetadata
 
         return ExportMetadata(
@@ -560,6 +573,7 @@ def import_mask_file(filepath: str | Path) -> Tuple[MaskData, ValidationResult]:
     Raises:
         ImportError: If import fails
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     importer = Importer()
     mask_data = importer.import_file(filepath)
     return mask_data, importer.validation_result
@@ -577,6 +591,7 @@ def detect_mask_format(filepath: str | Path) -> Tuple[FormatType, FileFormat, Ma
     Raises:
         ImportError: If format cannot be detected
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     importer = Importer()
     return importer.detect_format(filepath)
 
@@ -595,6 +610,7 @@ def find_associated_yaml(mask_filepath: str | Path) -> Optional[Path]:
     Returns:
         Path to associated YAML or None if not found
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     mask_path = Path(mask_filepath)
 
     # Try to get from metadata

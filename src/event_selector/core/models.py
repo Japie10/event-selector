@@ -18,6 +18,7 @@ from pydantic import (
     ValidationError,
 )
 import numpy as np
+from event_selector.utils.logging import get_logger
 
 
 # =====================

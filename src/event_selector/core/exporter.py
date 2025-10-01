@@ -21,6 +21,9 @@ from event_selector.core.models import (
     Mk2Format,
     MK2_BIT_MASK,
 )
+from event_selector.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 FormatObject: TypeAlias = Mk1Format | Mk2Format
 
@@ -48,12 +51,14 @@ class Exporter:
             format_obj: Optional format definition for metadata
             mask_data: Optional mask data to export
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.format_obj = format_obj
         self.mask_data = mask_data
         self._determine_format_type()
 
     def _determine_format_type(self) -> None:
         """Determine format type from available data."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         if self.mask_data:
             self.format_type = self.mask_data.format_type
         elif self.format_obj:
@@ -85,6 +90,7 @@ class Exporter:
         Raises:
             ExportError: If export fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         if self.format_type is None:
             raise ExportError("Format type not determined")
 
@@ -141,6 +147,7 @@ class Exporter:
         Raises:
             ExportError: If export fails or format not supported
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         if self.format_type != FormatType.MK2:
             raise ExportError("Format B is only supported for MK2")
 
@@ -207,6 +214,7 @@ class Exporter:
         Raises:
             ExportError: If export fails
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         filepath = Path(filepath)
 
         # Generate export text
@@ -246,6 +254,7 @@ class Exporter:
         Returns:
             ExportMetadata object
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Get current timestamp
         timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -277,6 +286,7 @@ class Exporter:
         Returns:
             Formatted header string
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         lines = []
 
         # Main metadata line
@@ -326,6 +336,7 @@ def export_mask(mask_array: np.ndarray,
     Raises:
         ExportError: If export fails
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     # Create mask data
     mask_data = MaskData.from_numpy(mask_array, format_type, mode)
 
@@ -365,6 +376,7 @@ def export_from_format(format_obj: FormatObject,
     Raises:
         ExportError: If export fails
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     exporter = Exporter(format_obj=format_obj)
 
     if format_b:
@@ -389,6 +401,7 @@ def parse_metadata_header(text: str) -> Optional[Dict[str, Any]]:
     Returns:
         Dictionary of metadata fields or None if no header found
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     lines = text.strip().split('\n')
     metadata = {}
 

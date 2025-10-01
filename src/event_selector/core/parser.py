@@ -57,13 +57,13 @@ class EventParser:
         Args:
             validation_result: Optional ValidationResult to collect issues
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.validation_result = validation_result or ValidationResult()
         self._reset_state()
 
     def _reset_state(self) -> None:
         """Reset parser state."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.format_type: Optional[FormatType] = None
         self.raw_data: Optional[Dict[str, Any]] = None
         self.sources: List[EventSource] = []
@@ -83,7 +83,7 @@ class EventParser:
             FormatDetectionError: If format cannot be detected
             ParseError: If parsing fails
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         filepath = Path(filepath)
 
         # Check file exists
@@ -115,7 +115,7 @@ class EventParser:
             FormatDetectionError: If format cannot be detected
             ParseError: If parsing fails
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
         self.raw_data = data
 
@@ -152,7 +152,7 @@ class EventParser:
         Raises:
             FormatDetectionError: If format cannot be determined
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
 
         # Check event keys
         pattern = re.compile(r'^(?:0x)?[0-9a-fA-F]+$')
@@ -224,7 +224,7 @@ class EventParser:
         Returns:
             Mk1Format object
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Parse sources
         sources = self._parse_sources(data.get('sources', []))
 
@@ -308,7 +308,7 @@ class EventParser:
         Returns:
             Mk2Format object
         """
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Parse sources
         sources = self._parse_sources(data.get('sources', []))
 
@@ -472,8 +472,7 @@ class EventParser:
         Returns:
             List of EventSource objects
         """
-        logger.trace("Start")
-        print(sources_data)
+        logger.trace("Entering {function_name}", function_name=__name__)
         sources = []
 
         if not sources_data:
@@ -524,7 +523,7 @@ def parse_yaml_file(filepath: str | Path) -> Tuple[FormatObject, ValidationResul
     Raises:
         Various parsing exceptions
     """
-    logger.trace("Start")
+    logger.trace("Entering {function_name}", function_name=__name__)
     parser = EventParser()
     result = parser.parse_file(filepath)
     return result, parser.validation_result
@@ -543,7 +542,7 @@ def parse_yaml_data(data: Dict[str, Any], source: str = "unknown") -> Tuple[Form
     Raises:
         Various parsing exceptions
     """
-    logger.trace("Start")
+    logger.trace("Entering {function_name}", function_name=__name__)
     parser = EventParser()
     result = parser.parse_data(data, source)
     return result, parser.validation_result
@@ -561,6 +560,6 @@ def detect_format(data: Dict[str, Any]) -> FormatType:
     Raises:
         FormatDetectionError: If format cannot be detected
     """
-    logger.trace("Start")
+    logger.trace("Entering {function_name}", function_name=__name__)
     parser = EventParser()
     return parser.detect_format(data)

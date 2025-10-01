@@ -28,7 +28,9 @@ from event_selector.core.models import (
     MK2_MAX_BIT,
     MK2_BIT_MASK,
 )
+from event_selector.utils.logging import get_logger
 
+logger = get_logger(__name__)
 FormatObject: TypeAlias = Mk1Format | Mk2Format
 
 class Validator:
@@ -36,11 +38,13 @@ class Validator:
 
     def __init__(self):
         """Initialize validator."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.result = ValidationResult()
         self._reset_state()
 
     def _reset_state(self) -> None:
         """Reset validator state."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.result = ValidationResult()
         self._seen_addresses: Set[str] = set()
         self._seen_keys: Set[str] = set()
@@ -56,6 +60,7 @@ class Validator:
         Returns:
             ValidationResult with all issues found
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
 
         # Validate sources
@@ -87,6 +92,7 @@ class Validator:
         Returns:
             ValidationResult with all issues found
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
 
         # Validate sources
@@ -125,6 +131,7 @@ class Validator:
         Returns:
             ValidationResult with all issues found
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
 
         # Validate data length
@@ -170,6 +177,7 @@ class Validator:
         Returns:
             ValidationResult with compatibility issues
         """
+        logger.trace("Entering {function_name}", function_name=__name__)
         self._reset_state()
 
         # Check format type match
@@ -201,6 +209,7 @@ class Validator:
 
     def _validate_sources(self, sources: List) -> None:
         """Validate event sources."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         seen_names = set()
 
         for i, source in enumerate(sources):
@@ -226,6 +235,7 @@ class Validator:
 
     def _validate_mk1_event(self, addr: str, event: EventMk1) -> None:
         """Validate individual MK1 event."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Check for duplicate normalized address
         norm_addr = event._normalized_address
         if norm_addr in self._seen_addresses:
@@ -279,6 +289,7 @@ class Validator:
 
     def _validate_mk2_event(self, key: str, event: EventMk2) -> None:
         """Validate individual MK2 event."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Check for duplicate normalized key
         norm_key = event._normalized_key
         if norm_key in self._seen_keys:
@@ -324,6 +335,7 @@ class Validator:
 
     def _validate_id_names(self, id_names: Dict[int, str]) -> None:
         """Validate ID names."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         for id_num, name in id_names.items():
             if not 0 <= id_num <= MK2_MAX_ID:
                 self.result.add_issue(
@@ -343,6 +355,7 @@ class Validator:
 
     def _validate_base_address(self, base_address: int) -> None:
         """Validate base address."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         if base_address > 0xFFFFFFFF:
             self.result.add_issue(
                 code=ValidationCode.MK2_ADDR_RANGE,
@@ -362,6 +375,7 @@ class Validator:
 
     def _validate_mk1_cross_references(self, format_obj: Mk1Format) -> None:
         """Cross-validate MK1 format references."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Report undefined event sources
         if self._undefined_sources and self._source_names:
             for source in self._undefined_sources:
@@ -377,6 +391,7 @@ class Validator:
 
     def _validate_mk2_cross_references(self, format_obj: Mk2Format) -> None:
         """Cross-validate MK2 format references."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Report undefined event sources
         if self._undefined_sources and self._source_names:
             for source in self._undefined_sources:
@@ -404,6 +419,7 @@ class Validator:
 
     def _check_mk1_coverage(self, format_obj: Mk1Format) -> None:
         """Check coverage of MK1 address space."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Group events by subtab
         subtab_coverage = defaultdict(set)
 
@@ -437,6 +453,7 @@ class Validator:
 
     def _validate_mk1_mask_compatibility(self, mask: np.ndarray, format_obj: Mk1Format) -> None:
         """Validate MK1 mask compatibility with format definition."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Create a map of defined events
         defined_events = set()
         for event in format_obj.events.values():
@@ -459,6 +476,7 @@ class Validator:
 
     def _validate_mk2_mask_compatibility(self, mask: np.ndarray, format_obj: Mk2Format) -> None:
         """Validate MK2 mask compatibility with format definition."""
+        logger.trace("Entering {function_name}", function_name=__name__)
         # Create a map of defined events
         defined_events = set()
         for event in format_obj.events.values():
@@ -500,6 +518,7 @@ def validate_format(format_obj: FormatObject) -> ValidationResult:
     Returns:
         ValidationResult with all issues found
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     validator = Validator()
 
     if isinstance(format_obj, Mk1Format):
@@ -527,6 +546,7 @@ def validate_mask(mask_data: MaskData,
     Returns:
         ValidationResult with all issues found
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     validator = Validator()
 
     # Validate mask data itself
@@ -553,6 +573,7 @@ def aggregate_errors(*results: ValidationResult) -> ValidationResult:
     Returns:
         Single ValidationResult with all issues aggregated
     """
+    logger.trace("Entering {function_name}", function_name=__name__)
     aggregated = ValidationResult()
 
     for result in results:

@@ -39,18 +39,18 @@ class editorEven(QCheckBox):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.setTristate(True)
         self.stateChanged.connect(self.on_state_changed)
 
     def on_state_changed(self, state):
         """Emit custom signal when state changes."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.state_changed.emit(state)
     
     def update_from_rows(self, checked_count: int, total_count: int):
         """Update header checkbox based on row selections."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         if total_count == 0:
             self.setCheckState(Qt.Unchecked)
         elif checked_count == 0:
@@ -109,7 +109,7 @@ class ToggleCommand(QUndoCommand):
 
     def __init__(self, table, row, old_state, new_state, parent_widget=None):
         super().__init__(f"Toggle row {row}")
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.table = table
         self.row = row
         self.old_state = old_state
@@ -118,7 +118,7 @@ class ToggleCommand(QUndoCommand):
 
     def redo(self):
         """Apply the toggle."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.new_state)
@@ -130,7 +130,7 @@ class ToggleCommand(QUndoCommand):
 
     def undo(self):
         """Revert the toggle."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         item = self.table.item(self.row, 0)
         if item:
             item.setData(Qt.UserRole, self.old_state)
@@ -145,14 +145,14 @@ class BulkToggleCommand(QUndoCommand):
 
     def __init__(self, table, changes, description="Bulk toggle", parent_widget=None):
         super().__init__(description)
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.table = table
         self.changes = changes
         self.parent_widget = parent_widget
 
     def redo(self):
         """Apply all toggles."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         for row, _, new_state in self.changes:
             item = self.table.item(row, 0)
             if item:
@@ -165,7 +165,7 @@ class BulkToggleCommand(QUndoCommand):
 
     def undo(self):
         """Revert all toggles."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         for row, old_state, _ in self.changes:
             item = self.table.item(row, 0)
             if item:
@@ -183,7 +183,7 @@ class EventSubTab(QWidget):
 
     def __init__(self, name: str, events: Dict, format_type: FormatType, parent=None):
         super().__init__(parent)
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.name = name
         self.events = events
         self.format_type = format_type
@@ -200,7 +200,7 @@ class EventSubTab(QWidget):
 
     def _setup_ui(self):
         """Setup subtab UI with row click handling."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
@@ -318,7 +318,7 @@ class EventSubTab(QWidget):
 
     def _populate_table(self):
         """Populate table with events."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         
         # Calculate number of rows based on format
         if self.format_type == FormatType.MK1:
@@ -410,7 +410,7 @@ class EventSubTab(QWidget):
 
     def _on_header_state_changed(self, state):
         """Handle header checkbox state change."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         
         if state == Qt.PartiallyChecked:
             return
@@ -438,7 +438,7 @@ class EventSubTab(QWidget):
 
     def _update_header_checkbox(self):
         """Update header checkbox based on row states."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         if not self.header_checkbox:
             return
 
@@ -462,7 +462,7 @@ class EventSubTab(QWidget):
 
     def _apply_filter(self, text: str):
         """Apply filter to table rows."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         if not text:
             # Show all rows
             for row in range(self.table.rowCount()):
@@ -485,7 +485,7 @@ class EventSubTab(QWidget):
 
     def _on_row_clicked(self, item):
         """Handle clicking anywhere on a row to toggle its checkbox."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         
         # Get the checkbox item for this row
         row = item.row()
@@ -518,12 +518,12 @@ class EventSubTab(QWidget):
 
     def _clear_filter(self):
         """Clear filter input."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.filter_input.clear()
 
     def get_mask_array(self) -> np.ndarray:
         """Get mask array from current selections."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         if self.format_type == FormatType.MK1:
             mask = np.zeros(4, dtype=np.uint32)  # 4 IDs per subtab
         else:
@@ -547,7 +547,7 @@ class EventSubTab(QWidget):
 
     def set_mask_array(self, mask: np.ndarray):
         """Set selections from mask array."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         for row in range(self.table.rowCount()):
             state_item = self.table.item(row, 0)
             if not state_item:
@@ -638,7 +638,7 @@ class EventTab(QWidget):
 
     def _setup_ui(self):
         """Setup main tab UI."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         layout = QVBoxLayout(self)
 
         # Sources banner (if applicable)
@@ -655,7 +655,7 @@ class EventTab(QWidget):
 
     def _create_subtabs(self):
         """Create subtabs based on format type."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         if self.format_type == FormatType.MK1:
             # Create three subtabs for mk1
             subtab_names = ["Data", "Network", "Application"]
@@ -695,7 +695,7 @@ class EventTab(QWidget):
 
     def _on_selection_changed(self):
         """Handle selection change in any subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.unsaved_changes = True
         self.selection_changed.emit()
 
@@ -775,7 +775,7 @@ class EventTab(QWidget):
 
     def set_mode(self, mode: MaskMode):
         """Set the mask mode (Event-Mask or Capture-Mask)."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         
         # Save current checkbox states to the current mode's array
         if self.mode == MaskMode.MASK:
@@ -814,17 +814,17 @@ class EventTab(QWidget):
 
     def get_current_subtab(self) -> Optional[EventSubTab]:
         """Get the currently active subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         return self.subtab_widget.currentWidget()
 
     def save_changes(self):
         """Save changes (placeholder for actual save logic)."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         self.unsaved_changes = False
 
     def get_event_count(self) -> int:
         """Get total event count."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         count = 0
         for subtab in self.subtabs.values():
             count += len(subtab.events)
@@ -832,7 +832,7 @@ class EventTab(QWidget):
 
     def get_selection_count(self) -> int:
         """Get selected event count."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         count = 0
         for subtab in self.subtabs.values():
             for row in range(subtab.table.rowCount()):
@@ -843,7 +843,7 @@ class EventTab(QWidget):
 
     def select_all(self):
         """Select all events in current subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if current_subtab:
             changes = []
@@ -861,7 +861,7 @@ class EventTab(QWidget):
 
     def select_none(self):
         """Deselect all events in current subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if current_subtab:
             changes = []
@@ -879,7 +879,7 @@ class EventTab(QWidget):
 
     def select_by_info(self, pattern: str) -> int:
         """Select events where info contains pattern."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if not current_subtab:
             return 0
@@ -908,7 +908,7 @@ class EventTab(QWidget):
 
     def unselect_by_info(self, pattern: str) -> int:
         """Unselect events where info contains pattern."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if not current_subtab:
             return 0
@@ -937,7 +937,7 @@ class EventTab(QWidget):
 
     def select_by_info_regex(self, regex_pattern: str) -> int:
         """Select events where info matches regex."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if not current_subtab:
             return 0
@@ -970,7 +970,7 @@ class EventTab(QWidget):
 
     def unselect_by_info_regex(self, regex_pattern: str) -> int:
         """Unselect events where info matches regex."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if not current_subtab:
             return 0
@@ -1003,19 +1003,19 @@ class EventTab(QWidget):
 
     def can_undo(self) -> bool:
         """Check if undo is available."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         return current_subtab and current_subtab.undo_stack.canUndo()
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         return current_subtab and current_subtab.undo_stack.canRedo()
 
     def undo(self):
         """Undo last action in current subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if current_subtab:
             current_subtab.undo_stack.undo()
@@ -1023,7 +1023,7 @@ class EventTab(QWidget):
 
     def redo(self):
         """Redo last undone action in current subtab."""
-        logger.trace("Start")
+        logger.trace("Entering {function_name}", function_name=__name__)
         current_subtab = self.subtab_widget.currentWidget()
         if current_subtab:
             current_subtab.undo_stack.redo()
