@@ -1,4 +1,4 @@
-"""View models for presentation layer."""
+"""View models"""
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
@@ -70,9 +70,9 @@ class ProjectViewModel:
     sources: List[str] = field(default_factory=list)  # Source names
     subtabs: List[SubtabViewModel] = field(default_factory=list)
 
-    # UI state
+    # UI state - CORRECTED to use EVENT as default
     active_subtab: int = 0
-    current_mode: MaskMode = MaskMode.MASK
+    current_mode: MaskMode = MaskMode.EVENT
 
     @classmethod
     def from_project(cls, project, project_id: str) -> 'ProjectViewModel':
@@ -118,7 +118,7 @@ class ProjectViewModel:
             for key, event in events.items():
                 coord = event.get_coordinate()
 
-                # Check if bit is set in current mask
+                # Check if bit is set in current mask (EVENT by default)
                 is_checked = project.event_mask.get_bit(coord.id, coord.bit)
 
                 row = EventRowViewModel(
@@ -163,7 +163,7 @@ class ProjectViewModel:
             for key, event in events.items():
                 coord = event.get_coordinate()
 
-                # Check if bit is set in current mask
+                # Check if bit is set in current mask (EVENT by default)
                 is_checked = project.event_mask.get_bit(coord.id, coord.bit)
 
                 row = EventRowViewModel(
@@ -190,33 +190,17 @@ class ProjectViewModel:
         return subtabs
 
     def get_subtab(self, index: int) -> Optional[SubtabViewModel]:
-        """Get subtab by index.
-
-        Args:
-            index: Subtab index
-
-        Returns:
-            SubtabViewModel or None
-        """
+        """Get subtab by index."""
         if 0 <= index < len(self.subtabs):
             return self.subtabs[index]
         return None
 
     def get_active_subtab(self) -> Optional[SubtabViewModel]:
-        """Get the currently active subtab.
-
-        Returns:
-            Active SubtabViewModel or None
-        """
+        """Get the currently active subtab."""
         return self.get_subtab(self.active_subtab)
 
     def update_event_state(self, key: EventKey, is_checked: bool):
-        """Update the checked state of an event.
-
-        Args:
-            key: Event key
-            is_checked: New checked state
-        """
+        """Update the checked state of an event."""
         for subtab in self.subtabs:
             for event in subtab.events:
                 if event.key == key:
@@ -224,11 +208,7 @@ class ProjectViewModel:
                     return
 
     def refresh_from_project(self, project):
-        """Refresh view model from updated project.
-
-        Args:
-            project: Updated domain project
-        """
+        """Refresh view model from updated project."""
         for subtab in self.subtabs:
             for event in subtab.events:
                 # Find corresponding domain event
@@ -236,12 +216,12 @@ class ProjectViewModel:
                 if domain_event:
                     coord = domain_event.get_coordinate()
 
-                    # Update checked state from mask
-                    if self.current_mode == MaskMode.MASK:
+                    # Update checked state from CORRECT mask based on mode
+                    if self.current_mode == MaskMode.EVENT:
                         event.is_checked = project.event_mask.get_bit(
                             coord.id, coord.bit
                         )
-                    else:
+                    else:  # CAPTURE mode
                         event.is_checked = project.capture_mask.get_bit(
                             coord.id, coord.bit
                         )
