@@ -1,8 +1,9 @@
-"""Base domain models for event formats."""
+"""Base domain models"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
+from pathlib import Path
 import numpy as np
 
 from event_selector.shared.types import (
@@ -158,8 +159,8 @@ class MaskData:
 class Project:
     """Represents a complete project with format and masks."""
     format: EventFormat
-    event_mask: MaskData
-    capture_mask: MaskData
+    event_mask: MaskData  # EVENT mode
+    capture_mask: MaskData  # CAPTURE mode
     yaml_path: Optional[Path] = None
     validation_result: Optional[ValidationResult] = None
 
@@ -171,15 +172,15 @@ class Project:
         if self.capture_mask.format_type != self.format.format_type:
             raise ValueError("Capture mask format doesn't match project format")
 
-        # Ensure mask modes are correct
-        if self.event_mask.mode != MaskMode.MASK:
-            raise ValueError("Event mask must be in MASK mode")
-        if self.capture_mask.mode != MaskMode.TRIGGER:
-            raise ValueError("Capture mask must be in TRIGGER mode")
+        # Ensure mask modes are correct - CORRECTED to use EVENT/CAPTURE
+        if self.event_mask.mode != MaskMode.EVENT:
+            raise ValueError("Event mask must be in EVENT mode")
+        if self.capture_mask.mode != MaskMode.CAPTURE:
+            raise ValueError("Capture mask must be in CAPTURE mode")
 
     def get_active_mask(self, mode: MaskMode) -> MaskData:
         """Get the mask for the specified mode."""
-        return self.event_mask if mode == MaskMode.MASK else self.capture_mask
+        return self.event_mask if mode == MaskMode.EVENT else self.capture_mask
 
     def toggle_event(self, key: EventKey, mode: MaskMode) -> None:
         """Toggle an event in the specified mask."""
