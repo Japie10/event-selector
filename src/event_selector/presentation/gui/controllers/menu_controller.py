@@ -1,4 +1,4 @@
-"""Controller for menu operations."""
+"""Menu controller with complete import/export implementations."""
 
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -14,15 +14,10 @@ if TYPE_CHECKING:
 
 
 class MenuController:
-    """Handles menu creation and actions."""
+    """Handles menu creation and actions - COMPLETE VERSION."""
 
     def __init__(self, main_window: 'MainWindow', project_controller: 'ProjectController'):
-        """Initialize menu controller.
-
-        Args:
-            main_window: Main window reference
-            project_controller: Project controller
-        """
+        """Initialize menu controller."""
         self.window = main_window
         self.project_controller = project_controller
         self.actions = {}
@@ -98,43 +93,46 @@ class MenuController:
 
         edit_menu.addSeparator()
 
-        # Select/Clear All
+        # Selection
         self.actions['select_all'] = QAction("Select &All", self.window)
         self.actions['select_all'].setShortcut(QKeySequence.SelectAll)
         self.actions['select_all'].triggered.connect(self._select_all)
         edit_menu.addAction(self.actions['select_all'])
 
         self.actions['clear_all'] = QAction("&Clear All", self.window)
+        self.actions['clear_all'].setShortcut(QKeySequence("Ctrl+Shift+A"))
         self.actions['clear_all'].triggered.connect(self._clear_all)
         edit_menu.addAction(self.actions['clear_all'])
 
         edit_menu.addSeparator()
 
-        # Selection Macros
-        macros_menu = edit_menu.addMenu("Selection &Macros")
-
-        self.actions['select_errors'] = QAction("Select All &Errors", self.window)
+        # Special selections
+        self.actions['select_errors'] = QAction("Select &Errors", self.window)
+        self.actions['select_errors'].setShortcut(QKeySequence("Ctrl+E"))
         self.actions['select_errors'].triggered.connect(self._select_errors)
-        macros_menu.addAction(self.actions['select_errors'])
+        edit_menu.addAction(self.actions['select_errors'])
 
-        self.actions['select_syncs'] = QAction("Select All &Syncs", self.window)
+        self.actions['select_syncs'] = QAction("Select &Syncs", self.window)
+        self.actions['select_syncs'].setShortcut(QKeySequence("Ctrl+S"))
         self.actions['select_syncs'].triggered.connect(self._select_syncs)
-        macros_menu.addAction(self.actions['select_syncs'])
+        edit_menu.addAction(self.actions['select_syncs'])
 
     def _setup_view_menu(self, menubar):
         """Setup View menu."""
         view_menu = menubar.addMenu("&View")
 
-        self.actions['problems_dock'] = QAction("&Problems Dock", self.window)
-        self.actions['problems_dock'].setCheckable(True)
-        self.actions['problems_dock'].setChecked(True)
-        self.actions['problems_dock'].triggered.connect(self._toggle_problems_dock)
-        view_menu.addAction(self.actions['problems_dock'])
+        # Problems dock
+        self.actions['toggle_problems'] = QAction("&Problems", self.window)
+        self.actions['toggle_problems'].setCheckable(True)
+        self.actions['toggle_problems'].setChecked(True)
+        self.actions['toggle_problems'].triggered.connect(self._toggle_problems_dock)
+        view_menu.addAction(self.actions['toggle_problems'])
 
     def _setup_help_menu(self, menubar):
         """Setup Help menu."""
         help_menu = menubar.addMenu("&Help")
 
+        # About
         self.actions['about'] = QAction("&About", self.window)
         self.actions['about'].triggered.connect(self._show_about)
         help_menu.addAction(self.actions['about'])
@@ -144,81 +142,141 @@ class MenuController:
         """Import mask file."""
         view = self.window.get_current_project_view()
         if not view:
+            QMessageBox.warning(
+                self.window,
+                "No Project",
+                "Please open a YAML file first."
+            )
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
             self.window,
             "Import Mask File",
             "",
-            "Text Files (*.txt);;All Files (*.*)"
+            "Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
-            view.import_mask(Path(file_path))
+            try:
+                view.import_mask(Path(file_path))
+            except Exception as e:
+                QMessageBox.critical(
+                    self.window,
+                    "Import Error",
+                    f"Failed to import mask:\n{e}"
+                )
 
     def _import_trigger(self):
         """Import trigger file."""
         view = self.window.get_current_project_view()
         if not view:
+            QMessageBox.warning(
+                self.window,
+                "No Project",
+                "Please open a YAML file first."
+            )
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
             self.window,
             "Import Trigger File",
             "",
-            "Text Files (*.txt);;All Files (*.*)"
+            "Trigger Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
-            view.import_trigger(Path(file_path))
+            try:
+                view.import_trigger(Path(file_path))
+            except Exception as e:
+                QMessageBox.critical(
+                    self.window,
+                    "Import Error",
+                    f"Failed to import trigger:\n{e}"
+                )
 
     def _export_mask(self):
         """Export mask file."""
         view = self.window.get_current_project_view()
         if not view:
+            QMessageBox.warning(
+                self.window,
+                "No Project",
+                "Please open a YAML file first."
+            )
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.window,
             "Export Mask File",
-            "mask.txt",
-            "Text Files (*.txt);;All Files (*.*)"
+            "event_mask.txt",
+            "Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
-            view.export_mask(Path(file_path))
+            try:
+                view.export_mask(Path(file_path))
+            except Exception as e:
+                QMessageBox.critical(
+                    self.window,
+                    "Export Error",
+                    f"Failed to export mask:\n{e}"
+                )
 
     def _export_trigger(self):
         """Export trigger file."""
         view = self.window.get_current_project_view()
         if not view:
+            QMessageBox.warning(
+                self.window,
+                "No Project",
+                "Please open a YAML file first."
+            )
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.window,
             "Export Trigger File",
-            "trigger.txt",
-            "Text Files (*.txt);;All Files (*.*)"
+            "capture_mask.txt",
+            "Trigger Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
-            view.export_trigger(Path(file_path))
+            try:
+                view.export_trigger(Path(file_path))
+            except Exception as e:
+                QMessageBox.critical(
+                    self.window,
+                    "Export Error",
+                    f"Failed to export trigger:\n{e}"
+                )
 
     def _export_both(self):
         """Export both mask and trigger files."""
         view = self.window.get_current_project_view()
         if not view:
+            QMessageBox.warning(
+                self.window,
+                "No Project",
+                "Please open a YAML file first."
+            )
             return
 
-        base_path, _ = QFileDialog.getSaveFileName(
+        file_path, _ = QFileDialog.getSaveFileName(
             self.window,
-            "Export Mask and Trigger Files (base name)",
-            "output",
-            "Text Files (*.txt);;All Files (*.*)"
+            "Export Base Filename",
+            "event_masks",
+            "All Files (*.*)"
         )
 
-        if base_path:
-            view.export_both(Path(base_path))
+        if file_path:
+            try:
+                view.export_both(Path(file_path))
+            except Exception as e:
+                QMessageBox.critical(
+                    self.window,
+                    "Export Error",
+                    f"Failed to export files:\n{e}"
+                )
 
     def _undo(self):
         """Undo last operation."""
@@ -227,7 +285,7 @@ class MenuController:
             view.undo()
 
     def _redo(self):
-        """Redo last undone operation."""
+        """Redo last operation."""
         view = self.window.get_current_project_view()
         if view:
             view.redo()
@@ -265,10 +323,16 @@ class MenuController:
 
     def _show_about(self):
         """Show about dialog."""
+        try:
+            from event_selector._version import version
+        except ImportError:
+            version = "Unknown"
+
         QMessageBox.about(
             self.window,
             "About Event Selector",
-            "Event Selector v1.0.0\n\n"
+            f"Event Selector v{version}\n\n"
             "Hardware/Firmware Event Mask Management Tool\n\n"
-            "Built with clean architecture for maintainability."
+            "Built with clean architecture for maintainability.\n\n"
+            "© 2025"
         )

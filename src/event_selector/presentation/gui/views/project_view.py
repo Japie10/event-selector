@@ -1,4 +1,4 @@
-"""Project view - coordinates subtabs and operations."""
+"""Complete ProjectView with import/export implementations."""
 
 from pathlib import Path
 from typing import Optional
@@ -15,7 +15,7 @@ from event_selector.shared.types import MaskMode, EventKey
 
 
 class ProjectView(QWidget):
-    """View for a single project - coordination only."""
+    """Complete project view with all operations implemented."""
 
     # Signals
     status_message = pyqtSignal(str)
@@ -24,19 +24,12 @@ class ProjectView(QWidget):
                  view_model: ProjectViewModel,
                  facade: EventSelectorFacade,
                  parent=None):
-        """Initialize project view.
-
-        Args:
-            view_model: Project view model
-            facade: Application facade
-            parent: Parent widget
-        """
+        """Initialize project view."""
         super().__init__(parent)
 
         self.view_model = view_model
         self.facade = facade
         self.project_id = view_model.project_id
-
         self.subtab_views = []
 
         self._init_ui()
@@ -71,11 +64,7 @@ class ProjectView(QWidget):
 
     # Event Operations
     def _on_event_toggled(self, event_key: EventKey):
-        """Handle event toggle from subtab.
-
-        Args:
-            event_key: Event key that was toggled
-        """
+        """Handle event toggle from subtab."""
         mode = self.view_model.current_mode
         self.facade.toggle_event(self.project_id, event_key, mode)
 
@@ -91,7 +80,6 @@ class ProjectView(QWidget):
         """Undo last operation."""
         description = self.facade.undo(self.project_id)
         if description:
-            # Refresh view model from project
             project = self.facade.get_project(self.project_id)
             self.view_model.refresh_from_project(project)
             self.refresh()
@@ -147,13 +135,12 @@ class ProjectView(QWidget):
         if current_view:
             error_events = current_view.view_model.get_error_events()
             if error_events:
-                # Filter to only those that are NOT checked
                 to_toggle = [e.key for e in error_events if not e.is_checked]
 
                 if to_toggle:
                     self.facade.toggle_events(
                         self.project_id,
-                        to_toggle,  # Only toggle the unchecked ones
+                        to_toggle,
                         self.view_model.current_mode
                     )
                     project = self.facade.get_project(self.project_id)
@@ -173,7 +160,6 @@ class ProjectView(QWidget):
         if current_view:
             sync_events = current_view.view_model.get_sync_events()
             if sync_events:
-                # Only toggle unchecked sync events
                 to_toggle = [e.key for e in sync_events if not e.is_checked]
 
                 if to_toggle:
@@ -193,7 +179,7 @@ class ProjectView(QWidget):
             else:
                 self.status_message.emit("No sync events found")
 
-    # Import/Export Operations
+    # Import/Export Operations - NOW IMPLEMENTED
     def import_mask(self, file_path: Path):
         """Import mask file.
 
@@ -201,26 +187,28 @@ class ProjectView(QWidget):
             file_path: Path to mask file
         """
         try:
-            result = self.facade.import_mask(
+            validation = self.facade.import_mask(
                 self.project_id,
                 file_path,
                 MaskMode.MASK
             )
 
-            if result.has_errors:
-                QMessageBox.warning(
-                    self,
-                    "Import Errors",
-                    "Import completed with errors. Check Problems dock."
-                )
-
+            # Update view
             project = self.facade.get_project(self.project_id)
             self.view_model.refresh_from_project(project)
             self.refresh()
-            self.status_message.emit("Mask imported successfully")
+
+            # Show validation results if any
+            if validation.has_warnings or validation.has_errors:
+                msg = "Mask imported with issues:\n\n"
+                for issue in validation.get_all_issues():
+                    msg += f"{issue.level.value}: {issue.message}\n"
+                QMessageBox.warning(self, "Import Warnings", msg)
+            else:
+                self.status_message.emit(f"Mask imported from {file_path.name}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Import Error", str(e))
+            raise  # Re-raise for menu controller to handle
 
     def import_trigger(self, file_path: Path):
         """Import trigger file.
@@ -229,26 +217,28 @@ class ProjectView(QWidget):
             file_path: Path to trigger file
         """
         try:
-            result = self.facade.import_mask(
+            validation = self.facade.import_mask(
                 self.project_id,
                 file_path,
                 MaskMode.TRIGGER
             )
 
-            if result.has_errors:
-                QMessageBox.warning(
-                    self,
-                    "Import Errors",
-                    "Import completed with errors. Check Problems dock."
-                )
-
+            # Update view
             project = self.facade.get_project(self.project_id)
             self.view_model.refresh_from_project(project)
             self.refresh()
-            self.status_message.emit("Trigger imported successfully")
+
+            # Show validation results if any
+            if validation.has_warnings or validation.has_errors:
+                msg = "Trigger imported with issues:\n\n"
+                for issue in validation.get_all_issues():
+                    msg += f"{issue.level.value}: {issue.message}\n"
+                QMessageBox.warning(self, "Import Warnings", msg)
+            else:
+                self.status_message.emit(f"Trigger imported from {file_path.name}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Import Error", str(e))
+            raise  # Re-raise for menu controller to handle
 
     def export_mask(self, file_path: Path):
         """Export mask file.
@@ -264,7 +254,7 @@ class ProjectView(QWidget):
             )
             self.status_message.emit(f"Mask exported to {file_path.name}")
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", str(e))
+            raise  # Re-raise for menu controller to handle
 
     def export_trigger(self, file_path: Path):
         """Export trigger file.
@@ -280,7 +270,7 @@ class ProjectView(QWidget):
             )
             self.status_message.emit(f"Trigger exported to {file_path.name}")
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", str(e))
+            raise  # Re-raise for menu controller to handle
 
     def export_both(self, base_path: Path):
         """Export both mask and trigger files.
@@ -301,15 +291,11 @@ class ProjectView(QWidget):
 
             self.status_message.emit("Exported mask and trigger files")
         except Exception as e:
-            QMessageBox.critical(self, "Export Error", str(e))
+            raise  # Re-raise for menu controller to handle
 
     # Mode Management
     def set_mode(self, mode: MaskMode):
-        """Set the current mode.
-
-        Args:
-            mode: New mask mode
-        """
+        """Set the current mode."""
         self.view_model.current_mode = mode
 
         # Refresh from project with new mode
@@ -326,11 +312,7 @@ class ProjectView(QWidget):
 
     # Helper Methods
     def _get_current_subtab_view(self) -> Optional[SubtabView]:
-        """Get the currently active subtab view.
-
-        Returns:
-            Current SubtabView or None
-        """
+        """Get the currently active subtab view."""
         widget = self.tab_widget.currentWidget()
         if isinstance(widget, SubtabView):
             return widget

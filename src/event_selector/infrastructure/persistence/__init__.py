@@ -1,9 +1,9 @@
-"""Session and state persistence."""
+"""Persistence infrastructure."""
 
 from event_selector.infrastructure.persistence.session_manager import (
     SessionManager,
     SessionState,
-    get_session_manager,
+    get_session_manager
 )
 
 __all__ = [
@@ -11,4 +11,3 @@ __all__ = [
     "SessionState",
     "get_session_manager",
 ]
-

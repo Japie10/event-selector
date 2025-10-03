@@ -21,6 +21,8 @@ __all__ = [
     "Project",
     "Mk1Event",
     "Mk1Format",
+    "Mk2Event",
+    "Mk2Format",
     "EventAddress",
     "EventInfo",
     "EventSource",
