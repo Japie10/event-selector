@@ -10,6 +10,9 @@ from event_selector.presentation.gui.views.project_view import ProjectView
 from event_selector.presentation.gui.view_models.project_vm import ProjectViewModel
 from event_selector.infrastructure.persistence.session_manager import SessionState
 from event_selector.shared.types import MaskMode
+from event_selector.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from event_selector.presentation.gui.main_window import MainWindow
@@ -225,7 +228,7 @@ class ProjectController:
                 view.refresh()
 
         except Exception as e:
-            print(f"Failed to restore state for {project_id}: {e}")
+            logger.error(f"Failed to restore state for {project_id}: {e}")
 
     def _restore_window_state(self, session: SessionState):
         """Restore window state from session.

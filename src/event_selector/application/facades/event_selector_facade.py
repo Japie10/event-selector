@@ -2,6 +2,8 @@ from event_selector.application.commands.toggle_event import ToggleEventCommand
 from event_selector.application.commands.bulk_operations import (
     SelectAllCommand, ClearAllCommand
 )
+from event_selector.domain.models.base import Project
+from event_selector.domain.interfaces.format_strategy import ValidationResult
 
 class EventSelectorFacade:
     """Main application facade."""

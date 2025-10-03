@@ -143,23 +143,27 @@ class ProjectView(QWidget):
 
     def select_errors(self):
         """Select all error events."""
-        # Get error keys from current subtab
         current_view = self._get_current_subtab_view()
         if current_view:
             error_events = current_view.view_model.get_error_events()
             if error_events:
-                error_keys = [e.key for e in error_events]
-                self.facade.toggle_events(
-                    self.project_id,
-                    error_keys,
-                    self.view_model.current_mode
-                )
-                project = self.facade.get_project(self.project_id)
-                self.view_model.refresh_from_project(project)
-                self.refresh()
-                self.status_message.emit(
-                    f"Selected {len(error_keys)} error events"
-                )
+                # Filter to only those that are NOT checked
+                to_toggle = [e.key for e in error_events if not e.is_checked]
+
+                if to_toggle:
+                    self.facade.toggle_events(
+                        self.project_id,
+                        to_toggle,  # Only toggle the unchecked ones
+                        self.view_model.current_mode
+                    )
+                    project = self.facade.get_project(self.project_id)
+                    self.view_model.refresh_from_project(project)
+                    self.refresh()
+                    self.status_message.emit(
+                        f"Selected {len(to_toggle)} error events"
+                    )
+                else:
+                    self.status_message.emit("All error events already selected")
             else:
                 self.status_message.emit("No error events found")
 
@@ -169,18 +173,23 @@ class ProjectView(QWidget):
         if current_view:
             sync_events = current_view.view_model.get_sync_events()
             if sync_events:
-                sync_keys = [e.key for e in sync_events]
-                self.facade.toggle_events(
-                    self.project_id,
-                    sync_keys,
-                    self.view_model.current_mode
-                )
-                project = self.facade.get_project(self.project_id)
-                self.view_model.refresh_from_project(project)
-                self.refresh()
-                self.status_message.emit(
-                    f"Selected {len(sync_keys)} sync events"
-                )
+                # Only toggle unchecked sync events
+                to_toggle = [e.key for e in sync_events if not e.is_checked]
+
+                if to_toggle:
+                    self.facade.toggle_events(
+                        self.project_id,
+                        to_toggle,
+                        self.view_model.current_mode
+                    )
+                    project = self.facade.get_project(self.project_id)
+                    self.view_model.refresh_from_project(project)
+                    self.refresh()
+                    self.status_message.emit(
+                        f"Selected {len(to_toggle)} sync events"
+                    )
+                else:
+                    self.status_message.emit("All sync events already selected")
             else:
                 self.status_message.emit("No sync events found")
 
