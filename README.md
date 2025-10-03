@@ -36,6 +36,31 @@ event-selector --version
 event-selector --debug DEBUG_LEVEL
 ```
 
+## Architecture
+
+Event Selector follows Clean Architecture principles:
+
+- **Presentation Layer**: Qt GUI with MVVM pattern
+- **Application Layer**: Use cases and orchestration via Facade
+- **Domain Layer**: Core business logic and entities
+- **Infrastructure**: Technical concerns (logging, config, persistence)
+
+### Key Design Patterns
+
+1. **MVVM**: Separates UI from business logic
+2. **Command Pattern**: Undo/redo support
+3. **Facade Pattern**: Simplified application interface
+4. **Strategy Pattern**: Format-specific operations
+5. **Repository Pattern**: Session persistence
+
+### File Organization
+
+Each layer has clear boundaries:
+- Controllers: < 200 lines
+- View Models: < 100 lines
+- Views: < 200 lines
+- Commands: < 50 lines
+
 ## Development
 
 ### Setup
