@@ -217,10 +217,10 @@ class MaskImporter:
         offset = first_addr & 0xFFF
 
         if offset == 0x40:
-            self.detected_mode = MaskMode.MASK
+            self.detected_mode = MaskMode.EVENT
             return True
         elif offset == 0x100:
-            self.detected_mode = MaskMode.TRIGGER
+            self.detected_mode = MaskMode.CAPTURE
             return True
 
         return False
@@ -290,7 +290,7 @@ class MaskImporter:
             data[id_val] = value
 
         # Create MaskData
-        mode = self.detected_mode or MaskMode.MASK
+        mode = self.detected_mode or MaskMode.EVENT
         return MaskData(
             format_type=self.detected_format,
             mode=mode,
@@ -342,10 +342,10 @@ class MaskImporter:
                 # Determine mode from offset
                 if 0x40 <= offset < 0x80:
                     mode_offset = 0x40
-                    self.detected_mode = MaskMode.MASK
+                    self.detected_mode = MaskMode.EVENT
                 elif 0x100 <= offset < 0x140:
                     mode_offset = 0x100
-                    self.detected_mode = MaskMode.TRIGGER
+                    self.detected_mode = MaskMode.CAPTURE
                 else:
                     self.validation_result.add_warning(
                         ValidationCode.KEY_FORMAT,
@@ -390,7 +390,7 @@ class MaskImporter:
             self.metadata = {'format': 'mk2'}
         self.metadata['base_address'] = f"0x{base_address:08x}"
 
-        mode = self.detected_mode or MaskMode.MASK
+        mode = self.detected_mode or MaskMode.EVENT
         return MaskData(
             format_type=FormatType.MK2,
             mode=mode,
