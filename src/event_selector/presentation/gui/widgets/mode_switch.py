@@ -8,20 +8,16 @@ from event_selector.shared.types import MaskMode
 
 
 class ModeSwitchWidget(QWidget):
-    """Widget for switching between mask modes."""
+    """Widget for switching between Event Mask and Capture Mask modes."""
 
-    # Signal emitted when mode changes
+    # Signal emitted when mode changes (emits mode value string)
     mode_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        """Initialize mode switch widget.
-
-        Args:
-            parent: Parent widget
-        """
+        """Initialize mode switch widget."""
         super().__init__(parent)
 
-        self.current_mode = MaskMode.MASK
+        self.current_mode = MaskMode.EVENT  # Default to EVENT mode
         self._init_ui()
 
     def _init_ui(self):
@@ -37,16 +33,16 @@ class ModeSwitchWidget(QWidget):
         # Radio button group
         self.button_group = QButtonGroup(self)
 
-        # Event Mask radio
+        # Event Mask radio (default)
         self.event_mask_radio = QRadioButton("Event Mask")
-        self.event_mask_radio.setChecked(True)
+        self.event_mask_radio.setChecked(True)  # Default checked
         self.event_mask_radio.setToolTip("Edit Event Mask")
         self.button_group.addButton(self.event_mask_radio, 0)
         layout.addWidget(self.event_mask_radio)
 
         # Capture Mask radio
         self.capture_mask_radio = QRadioButton("Capture Mask")
-        self.capture_mask_radio.setToolTip("Edit Capture Mask (Trigger)")
+        self.capture_mask_radio.setToolTip("Edit Capture Mask")
         self.button_group.addButton(self.capture_mask_radio, 1)
         layout.addWidget(self.capture_mask_radio)
 
@@ -79,19 +75,19 @@ class ModeSwitchWidget(QWidget):
             button: The clicked button
         """
         if button == self.event_mask_radio:
-            self.current_mode = MaskMode.MASK
-            self.mode_changed.emit("mask")
+            self.current_mode = MaskMode.EVENT
+            self.mode_changed.emit(MaskMode.EVENT.value)  # Emit "event"
         else:
-            self.current_mode = MaskMode.TRIGGER
-            self.mode_changed.emit("trigger")
+            self.current_mode = MaskMode.CAPTURE
+            self.mode_changed.emit(MaskMode.CAPTURE.value)  # Emit "capture"
 
     def set_mode(self, mode: MaskMode):
         """Set the current mode programmatically.
 
         Args:
-            mode: The mode to set
+            mode: The mode to set (MaskMode.EVENT or MaskMode.CAPTURE)
         """
-        if mode == MaskMode.MASK:
+        if mode == MaskMode.EVENT:
             self.event_mask_radio.setChecked(True)
         else:
             self.capture_mask_radio.setChecked(True)
@@ -102,6 +98,6 @@ class ModeSwitchWidget(QWidget):
         """Get the current mode.
 
         Returns:
-            Current MaskMode
+            Current MaskMode (EVENT or CAPTURE)
         """
         return self.current_mode
