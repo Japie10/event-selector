@@ -99,9 +99,9 @@ class EventSelectorFacade:
         )
 
     def export_both_masks(self, project_id: str, mask_path: Path, trigger_path: Path):
-        """Export both mask and trigger."""
-        self.export_mask(project_id, mask_path, MaskMode.MASK)
-        self.export_mask(project_id, trigger_path, MaskMode.TRIGGER)
+        """Export both event mask and capture mask."""
+        self.export_mask(project_id, mask_path, MaskMode.EVENT)
+        self.export_mask(project_id, trigger_path, MaskMode.CAPTURE)
 
     def _get_command_stack(self, project_id: str) -> CommandStack:
         """Get or create command stack for project."""

@@ -157,7 +157,7 @@ class MainWindow(QMainWindow):
         """Handle mode change.
 
         Args:
-            mode: New mode (mask or trigger)
+            mode: New mode (event or capture)
         """
         self.current_mode = MaskMode(mode)
 

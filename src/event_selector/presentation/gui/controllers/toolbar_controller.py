@@ -41,7 +41,7 @@ class ToolbarController:
 
         toolbar.addSeparator()
 
-        if 'export_mask' in menu_controller.actions:
-            toolbar.addAction(menu_controller.actions['export_mask'])
-        if 'export_trigger' in menu_controller.actions:
-            toolbar.addAction(menu_controller.actions['export_trigger'])
+        if 'export_event_mask' in menu_controller.actions:
+            toolbar.addAction(menu_controller.actions['export_event_mask'])
+        if 'export_capture_mask' in menu_controller.actions:
+            toolbar.addAction(menu_controller.actions['export_capture_mask'])

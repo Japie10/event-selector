@@ -44,25 +44,25 @@ class MenuController:
         file_menu.addAction(self.actions['open'])
 
         # Import
-        self.actions['import_mask'] = QAction("Import &Mask...", self.window)
-        self.actions['import_mask'].triggered.connect(self._import_mask)
-        file_menu.addAction(self.actions['import_mask'])
+        self.actions['import_event_mask'] = QAction("Import &Event Mask...", self.window)
+        self.actions['import_event_mask'].triggered.connect(self._import_event_mask)
+        file_menu.addAction(self.actions['import_event_mask'])
 
-        self.actions['import_trigger'] = QAction("Import &Trigger...", self.window)
-        self.actions['import_trigger'].triggered.connect(self._import_trigger)
-        file_menu.addAction(self.actions['import_trigger'])
+        self.actions['import_capture_mask'] = QAction("Import &Capture Mask...", self.window)
+        self.actions['import_capture_mask'].triggered.connect(self._import_capture_mask)
+        file_menu.addAction(self.actions['import_capture_mask'])
 
         file_menu.addSeparator()
 
         # Export
-        self.actions['export_mask'] = QAction("Export Mask...", self.window)
-        self.actions['export_mask'].setShortcut(QKeySequence("Ctrl+Shift+E"))
-        self.actions['export_mask'].triggered.connect(self._export_mask)
-        file_menu.addAction(self.actions['export_mask'])
+        self.actions['export_event_mask'] = QAction("Export Event Mask...", self.window)
+        self.actions['export_event_mask'].setShortcut(QKeySequence("Ctrl+Shift+E"))
+        self.actions['export_event_mask'].triggered.connect(self._export_event_mask)
+        file_menu.addAction(self.actions['export_event_mask'])
 
-        self.actions['export_trigger'] = QAction("Export Trigger...", self.window)
-        self.actions['export_trigger'].triggered.connect(self._export_trigger)
-        file_menu.addAction(self.actions['export_trigger'])
+        self.actions['export_capture_mask'] = QAction("Export Capture Mask...", self.window)
+        self.actions['export_capture_mask'].triggered.connect(self._export_capture_mask)
+        file_menu.addAction(self.actions['export_capture_mask'])
 
         self.actions['export_both'] = QAction("Export Both...", self.window)
         self.actions['export_both'].triggered.connect(self._export_both)
@@ -138,8 +138,8 @@ class MenuController:
         help_menu.addAction(self.actions['about'])
 
     # Action handlers
-    def _import_mask(self):
-        """Import mask file."""
+    def _import_event_mask(self):
+        """Import event mask file."""
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -151,23 +151,23 @@ class MenuController:
 
         file_path, _ = QFileDialog.getOpenFileName(
             self.window,
-            "Import Mask File",
+            "Import Event Mask File",
             "",
-            "Mask Files (*.txt);;All Files (*.*)"
+            "Event Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
             try:
-                view.import_mask(Path(file_path))
+                view.import_event_mask(Path(file_path))
             except Exception as e:
                 QMessageBox.critical(
                     self.window,
                     "Import Error",
-                    f"Failed to import mask:\n{e}"
+                    f"Failed to import event mask:\n{e}"
                 )
 
-    def _import_trigger(self):
-        """Import trigger file."""
+    def _import_capture_mask(self):
+        """Import capture mask file."""
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -179,23 +179,23 @@ class MenuController:
 
         file_path, _ = QFileDialog.getOpenFileName(
             self.window,
-            "Import Trigger File",
+            "Import Capture Mask File",
             "",
-            "Trigger Files (*.txt);;All Files (*.*)"
+            "Capture Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
             try:
-                view.import_trigger(Path(file_path))
+                view.import_capture_mask(Path(file_path))
             except Exception as e:
                 QMessageBox.critical(
                     self.window,
                     "Import Error",
-                    f"Failed to import trigger:\n{e}"
+                    f"Failed to import capture mask:\n{e}"
                 )
 
-    def _export_mask(self):
-        """Export mask file."""
+    def _export_event_mask(self):
+        """Export event mask file."""
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -207,23 +207,23 @@ class MenuController:
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.window,
-            "Export Mask File",
+            "Export Event Mask File",
             "event_mask.txt",
-            "Mask Files (*.txt);;All Files (*.*)"
+            "Event Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
             try:
-                view.export_mask(Path(file_path))
+                view.export_event_mask(Path(file_path))
             except Exception as e:
                 QMessageBox.critical(
                     self.window,
                     "Export Error",
-                    f"Failed to export mask:\n{e}"
+                    f"Failed to export event mask:\n{e}"
                 )
 
-    def _export_trigger(self):
-        """Export trigger file."""
+    def _export_capture_mask(self):
+        """Export capture mask file."""
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -235,23 +235,23 @@ class MenuController:
 
         file_path, _ = QFileDialog.getSaveFileName(
             self.window,
-            "Export Trigger File",
+            "Export Capture Mask File",
             "capture_mask.txt",
-            "Trigger Files (*.txt);;All Files (*.*)"
+            "Capture Mask Files (*.txt);;All Files (*.*)"
         )
 
         if file_path:
             try:
-                view.export_trigger(Path(file_path))
+                view.export_capture_mask(Path(file_path))
             except Exception as e:
                 QMessageBox.critical(
                     self.window,
                     "Export Error",
-                    f"Failed to export trigger:\n{e}"
+                    f"Failed to export capture mask:\n{e}"
                 )
 
     def _export_both(self):
-        """Export both mask and trigger files."""
+        """Export both mask and capture mask files."""
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(

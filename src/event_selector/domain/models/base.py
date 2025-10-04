@@ -80,7 +80,7 @@ class EventFormat(ABC):
 
 @dataclass
 class MaskData:
-    """Container for mask/trigger data."""
+    """Container for event/capture mask data."""
     format_type: FormatType
     mode: MaskMode
     data: np.ndarray  # Array of 32-bit values

@@ -18,15 +18,15 @@ class SessionState:
     # File state
     open_files: List[str] = field(default_factory=list)
     active_tab: int = 0
-    current_mode: str = "mask"  # "mask" or "trigger"
+    current_mode: str = "event"  # "event" or "capture"
 
     # Window state
     window_geometry: Dict[str, int] = field(default_factory=dict)
     dock_states: Dict[str, bool] = field(default_factory=dict)
 
     # Mask states (project_id -> list of 32-bit values)
-    mask_states: Dict[str, List[int]] = field(default_factory=dict)
-    trigger_states: Dict[str, List[int]] = field(default_factory=dict)
+    event_mask_states: Dict[str, List[int]] = field(default_factory=dict)
+    capture_mask_states: Dict[str, List[int]] = field(default_factory=dict)
 
     # Metadata
     timestamp: Optional[str] = None
@@ -140,10 +140,10 @@ class SessionManager:
             session.open_files.remove(file_path)
 
             # Also remove associated mask states
-            if file_path in session.mask_states:
-                del session.mask_states[file_path]
-            if file_path in session.trigger_states:
-                del session.trigger_states[file_path]
+            if file_path in session.event_mask_states:
+                del session.event_mask_states[file_path]
+            if file_path in session.capture_mask_states:
+                del session.capture_mask_states[file_path]
 
             self.save_session(session)
 

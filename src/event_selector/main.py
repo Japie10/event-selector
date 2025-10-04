@@ -18,7 +18,7 @@ def setup_argument_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         prog='event-selector',
-        description='Hardware/Firmware Event Mask Management Tool',
+        description='FPGA Event Mask Management Tool',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
@@ -44,31 +44,31 @@ def setup_argument_parser() -> argparse.ArgumentParser:
     )
     
     parser.add_argument(
-        '--import-mask',
+        '--import-event-mask',
         type=Path,
-        dest='import_mask',
-        help='Import mask file'
+        dest='import_event',
+        help='Import event mask file'
     )
     
     parser.add_argument(
-        '--import-trigger',
+        '--import-capture-mask',
         type=Path,
-        dest='import_trigger',
-        help='Import trigger file'
+        dest='import_capture',
+        help='Import capture mask file'
     )
     
     parser.add_argument(
-        '--export-mask',
+        '--export-event-mask',
         type=Path,
-        dest='export_mask',
-        help='Export mask file'
+        dest='export_event',
+        help='Export event mask file'
     )
     
     parser.add_argument(
-        '--export-trigger',
+        '--export-capture-mask',
         type=Path,
-        dest='export_trigger',
-        help='Export trigger file'
+        dest='export_capture',
+        help='Export capture mask file'
     )
     
     parser.add_argument(
@@ -128,30 +128,30 @@ def run_cli_mode(args: argparse.Namespace, facade: EventSelectorFacade) -> int:
                     continue
                 
                 # Import masks if specified
-                if args.import_mask:
-                    logger.info(f"Importing mask from {args.import_mask}")
-                    import_result = facade.import_mask(project, args.import_mask)
+                if args.import_event:
+                    logger.info(f"Importing event mask from {args.import_event}")
+                    import_result = facade.import_mask(project, args.import_event)
                     if import_result.has_errors:
                         logger.error("Import failed")
                         return 1
                 
-                if args.import_trigger:
-                    logger.info(f"Importing trigger from {args.import_trigger}")
+                if args.import_capture:
+                    logger.info(f"Importing capture mask from {args.import_capture}")
                     import_result = facade.import_mask(
-                        project, args.import_trigger, mode=MaskMode.TRIGGER
+                        project, args.import_capture, mode=MaskMode.CAPTURE
                     )
                     if import_result.has_errors:
                         logger.error("Import failed")
                         return 1
                 
                 # Export masks if specified
-                if args.export_mask:
-                    logger.info(f"Exporting mask to {args.export_mask}")
-                    facade.export_mask(project, args.export_mask, MaskMode.MASK)
+                if args.export_event:
+                    logger.info(f"Exporting event mask to {args.export_event}")
+                    facade.export_mask(project, args.export_event, MaskMode.EVENT)
                 
-                if args.export_trigger:
-                    logger.info(f"Exporting trigger to {args.export_trigger}")
-                    facade.export_mask(project, args.export_trigger, MaskMode.TRIGGER)
+                if args.export_capture:
+                    logger.info(f"Exporting capture mask to {args.export_capture}")
+                    facade.export_mask(project, args.export_capture, MaskMode.CAPTURE)
         
         return 0
         

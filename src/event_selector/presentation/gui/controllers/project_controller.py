@@ -196,8 +196,8 @@ class ProjectController:
         for project_id in session.open_files:
             try:
                 project = self.facade.get_project(project_id)
-                session.mask_states[project_id] = project.event_mask.data.tolist()
-                session.trigger_states[project_id] = project.capture_mask.data.tolist()
+                session.event_mask_states[project_id] = project.event_mask.data.tolist()
+                session.capture_mask_states[project_id] = project.capture_mask.data.tolist()
             except:
                 pass
 
@@ -215,13 +215,13 @@ class ProjectController:
             view = self.window.project_views.get(project_id)
 
             # Restore mask states
-            if project_id in session.mask_states:
-                mask_values = session.mask_states[project_id]
-                project.event_mask.data[:] = mask_values[:len(project.event_mask.data)]
+            if project_id in session.event_mask_states:
+                event_mask_values = session.event_mask_states[project_id]
+                project.event_mask.data[:] = event_mask_values[:len(project.event_mask.data)]
 
-            if project_id in session.trigger_states:
-                trigger_values = session.trigger_states[project_id]
-                project.capture_mask.data[:] = trigger_values[:len(project.capture_mask.data)]
+            if project_id in session.capture_mask_states:
+                capture_mask_values = session.capture_mask_states[project_id]
+                project.capture_mask.data[:] = capture_mask_values[:len(project.capture_mask.data)]
 
             # Refresh view
             if view:

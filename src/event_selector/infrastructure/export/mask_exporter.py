@@ -183,22 +183,22 @@ class MaskExporter:
 
     def export_both(
         self,
-        mask_data: MaskData,
-        trigger_data: MaskData,
-        mask_path: Path,
-        trigger_path: Path,
+        event_mask_data: MaskData,
+        capture_mask_data: MaskData,
+        event_mask_path: Path,
+        capture_mask_path: Path,
         yaml_file: Optional[Path] = None
     ) -> None:
-        """Export both mask and trigger files.
+        """Export both mask and event_mask_data files.
 
         Args:
-            mask_data: Event mask data
-            trigger_data: Capture mask data
-            mask_path: Output path for mask file
-            trigger_path: Output path for trigger file
+            event_mask_data: Event mask data
+            capture_mask_data: Capture mask data
+            event_mask_path: Output path for event mask file
+            capture_mask_path: Output path for capture mask file
             yaml_file: Optional YAML file reference
         """
-        self.export_file(mask_data, mask_path, include_metadata=True, yaml_file=yaml_file)
-        self.export_file(trigger_data, trigger_path, include_metadata=True, yaml_file=yaml_file)
+        self.export_file(event_mask_data, event_mask_path, include_metadata=True, yaml_file=yaml_file)
+        self.export_file(capture_mask_data, capture_mask_path, include_metadata=True, yaml_file=yaml_file)
 
-        logger.info(f"Exported both mask and trigger files")
+        logger.info(f"Exported both event mask and capture mask files")

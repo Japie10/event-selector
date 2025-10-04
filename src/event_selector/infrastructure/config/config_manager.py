@@ -13,7 +13,7 @@ class AppConfig:
     # UI Settings
     accent_color: str = "#007ACC"
     row_density: str = "comfortable"  # compact | comfortable
-    default_mode: str = "mask"  # mask | trigger
+    default_mode: str = "event"  # event | capture
     
     # Behavior Settings
     restore_on_start: bool = True
