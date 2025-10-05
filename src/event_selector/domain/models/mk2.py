@@ -1,7 +1,7 @@
 """MK2 format domain models."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 from event_selector.shared.types import (
     EventKey, EventID, BitPosition, FormatType,
