@@ -1,7 +1,7 @@
 """MK1 format domain model implementation."""
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 
 from event_selector.shared.types import (
@@ -224,3 +224,123 @@ class Mk1Format(EventFormat):
                 result[key] = event
         
         return result
+
+    @classmethod
+    def normalize_key(cls, key: str | int) -> EventKey:
+        """Normalize MK1 address to standard "0xNNN" format.
+
+        Args:
+            key: Raw key (string or integer)
+
+        Returns:
+            Normalized EventKey in format "0xNNN"
+
+        Raises:
+            ValueError: If key is invalid or not in MK1 ranges
+        """
+        if isinstance(key, int):
+            addr = key
+        elif isinstance(key, str):
+            key = key.strip()
+            addr = int(key, 16) if 'x' in key.lower() else int(key, 16)
+        else:
+            raise ValueError(f"Invalid key type: {type(key)}")
+
+        # Validate MK1 ranges
+        # Data: 0x000-0x07F, Network: 0x200-0x27F, Application: 0x400-0x47F
+        if not (0x000 <= addr <= 0x07F or
+                0x200 <= addr <= 0x27F or
+                0x400 <= addr <= 0x47F):
+            raise ValueError(
+                f"Address 0x{addr:03X} not in valid MK1 ranges "
+                "(0x000-0x07F, 0x200-0x27F, 0x400-0x47F)"
+            )
+
+        return EventKey(f"0x{addr:03X}")
+
+    @classmethod
+    def _parse_events(cls, data: Dict[str, Any], source: str, validation: ValidationResult) -> Tuple[Dict[EventKey, Event], Dict[str, Any]]:
+        """Parse MK1 events from YAML data.
+
+        Args:
+            data: YAML data dictionary
+            source: Source identifier
+            validation: ValidationResult for collecting errors
+
+        Returns:
+            Tuple of (events dict, empty dict - MK1 has no extra data)
+        """
+        from event_selector.domain.interfaces.format_strategy import ValidationCode
+
+        events = {}
+        seen_keys = set()
+
+        for key, value in data.items():
+            # Skip metadata keys
+            if key == 'sources':
+                continue
+
+            # Validate event data structure
+            if not isinstance(value, dict):
+                validation.add_error(
+                    ValidationCode.KEY_FORMAT,
+                    f"Event '{key}' must be a dictionary",
+                    location=source
+                )
+                continue
+
+            try:
+                # Normalize the key
+                normalized_key = cls.normalize_key(key)
+
+                # Check for duplicates
+                if normalized_key in seen_keys:
+                    validation.add_error(
+                        ValidationCode.DUPLICATE_KEY,
+                        f"Duplicate address: {normalized_key} (original: {key})",
+                        location=source
+                    )
+                    continue
+
+                seen_keys.add(normalized_key)
+
+                # Create event info
+                event_info = EventInfo(
+                    source=value.get('event_source', 'unknown'),
+                    description=value.get('description', ''),
+                    info=value.get('info', '')
+                )
+
+                # Create MK1 event
+                # For MK1, we need EventAddress from value_objects
+                from event_selector.domain.models.value_objects import EventAddress
+                event = Mk1Event(
+                    key=normalized_key,
+                    address=EventAddress(normalized_key),
+                    info=event_info
+                )
+
+                events[normalized_key] = event
+
+            except ValueError as e:
+                validation.add_error(
+                    ValidationCode.MK1_ADDR_RANGE,
+                    f"Invalid MK1 address '{key}': {e}",
+                    location=source
+                )
+
+        return events, {}  # No extra data for MK1
+
+    @classmethod
+    def _create_instance(cls, sources: list[EventSource], events: Dict[EventKey, Event], extra_data: Dict[str, Any]) -> 'Mk1Format':
+        """Create Mk1Format instance.
+
+        Args:
+            sources: Parsed sources
+            events: Parsed events
+            extra_data: Unused for MK1
+
+        Returns:
+            Mk1Format instance
+        """
+        return cls(sources=sources, events=events)
