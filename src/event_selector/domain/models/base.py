@@ -112,7 +112,7 @@ class EventFormat(ABC):
 
     @classmethod
     @abstractmethod
-    def normalize_key(cls, key: Union[str, int]) -> EventKey:
+    def normalize_key(cls, key: str | int) -> EventKey:
         """Normalize key to standard format.
 
         Args:
