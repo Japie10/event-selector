@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 import numpy as np
 
@@ -77,6 +77,135 @@ class EventFormat(ABC):
         """Count total events."""
         return len(self.events)
 
+
+
+    @classmethod
+    def from_yaml_data(cls, data: Dict[str, Any], source: str = "unknown") -> Tuple['EventFormat', 'ValidationResult']:
+        """Parse format from YAML data (Template Method Pattern).
+
+        This method orchestrates the parsing process:
+        1. Parse sources (common)
+        2. Parse events (format-specific, delegated to subclass)
+        3. Create instance (format-specific, delegated to subclass)
+
+        Args:
+            data: YAML data dictionary
+            source: Source identifier for error messages
+
+        Returns:
+            Tuple of (EventFormat instance, ValidationResult)
+        """
+        from event_selector.domain.interfaces.format_strategy import ValidationResult
+
+        validation = ValidationResult()
+
+        # Parse sources (common to all formats)
+        sources = cls._parse_sources(data.get('sources', []), validation)
+
+        # Parse format-specific data (delegated to subclasses)
+        events, extra_data = cls._parse_events(data, source, validation)
+
+        # Create instance (subclass-specific)
+        instance = cls._create_instance(sources, events, extra_data)
+
+        return instance, validation
+
+    @classmethod
+    @abstractmethod
+    def normalize_key(cls, key: Union[str, int]) -> EventKey:
+        """Normalize key to standard format.
+
+        Args:
+            key: Raw key (string or integer)
+
+        Returns:
+            Normalized EventKey
+
+        Raises:
+            ValueError: If key is invalid for this format
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def _parse_events(cls, data: Dict[str, Any], source: str, validation: 'ValidationResult') -> Tuple[Dict[EventKey, Event], Dict[str, Any]]:
+        """Parse events and format-specific data.
+
+        Args:
+            data: YAML data dictionary
+            source: Source identifier for error messages
+            validation: ValidationResult to collect errors/warnings
+
+        Returns:
+            Tuple of (events dict, extra_data dict for format-specific fields)
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def _create_instance(cls, sources: list[EventSource], events: Dict[EventKey, Event], extra_data: Dict[str, Any]) -> 'EventFormat':
+        """Create format instance with parsed data.
+
+        Args:
+            sources: Parsed sources
+            events: Parsed events
+            extra_data: Format-specific data (e.g., id_names for MK2)
+
+        Returns:
+            EventFormat instance
+        """
+        pass
+
+    @staticmethod
+    def _parse_sources(sources_data: Any, validation: 'ValidationResult') -> list[EventSource]:
+        """Parse sources list from YAML (common implementation).
+
+        Args:
+            sources_data: Sources data from YAML
+            validation: ValidationResult to collect errors/warnings
+
+        Returns:
+            List of EventSource objects
+        """
+        from event_selector.domain.interfaces.format_strategy import ValidationCode
+
+        sources = []
+
+        if not isinstance(sources_data, list):
+            if sources_data:
+                validation.add_warning(
+                    ValidationCode.KEY_FORMAT,
+                    "Sources should be a list, skipping"
+                )
+            return sources
+
+        for idx, item in enumerate(sources_data):
+            if not isinstance(item, dict):
+                validation.add_warning(
+                    ValidationCode.KEY_FORMAT,
+                    f"Source at index {idx} should be a dictionary, skipping"
+                )
+                continue
+
+            name = item.get('name', '')
+            description = item.get('description', '')
+
+            if not name:
+                validation.add_warning(
+                    ValidationCode.MISSING_REQUIRED_FIELD,
+                    f"Source at index {idx} has empty name, skipping"
+                )
+                continue
+
+            try:
+                sources.append(EventSource(name=name, description=description))
+            except Exception as e:
+                validation.add_warning(
+                    ValidationCode.KEY_FORMAT,
+                    f"Invalid source at index {idx}: {e}"
+                )
+
+        return sources
 
 @dataclass
 class MaskData:
