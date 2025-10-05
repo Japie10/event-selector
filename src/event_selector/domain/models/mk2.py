@@ -211,3 +211,160 @@ class Mk2Format(EventFormat):
             "subtabs": subtabs,
             "base_address": self.base_address,
         }
+
+
+    @classmethod
+    def normalize_key(cls, key: str | int) -> EventKey:
+        """Normalize MK2 key to standard "0xibb" format.
+
+        Args:
+            key: Raw key (string or integer)
+
+        Returns:
+            Normalized EventKey in format "0xibb"
+
+        Raises:
+            ValueError: If key is invalid or out of range
+        """
+        if isinstance(key, int):
+            value = key
+        elif isinstance(key, str):
+            key = key.strip()
+            value = int(key, 16) if 'x' in key.lower() else int(key, 16)
+        else:
+            raise ValueError(f"Invalid key type: {type(key)}")
+
+        # Extract ID and bit from value (format: 0xibb)
+        id_num = (value >> 8) & 0xF
+        bit_num = value & 0xFF
+
+        # Validate ranges
+        if id_num > 15:
+            raise ValueError(f"ID {id_num} out of range (0-15)")
+        if bit_num > 27:
+            raise ValueError(f"Bit {bit_num} out of range (0-27)")
+
+        return EventKey(f"0x{id_num:01X}{bit_num:02X}")
+
+    @classmethod
+    def _parse_events(cls, data: Dict[str, Any], source: str, validation: ValidationResult) -> Tuple[Dict[EventKey, Event], Dict[str, Any]]:
+        """Parse MK2 events and format-specific data.
+
+        Args:
+            data: YAML data dictionary
+            source: Source identifier
+            validation: ValidationResult for collecting errors
+
+        Returns:
+            Tuple of (events dict, extra_data dict with id_names and base_address)
+        """
+        from event_selector.domain.interfaces.format_strategy import ValidationCode
+
+        events = {}
+        seen_keys = set()
+
+        # Parse id_names (MK2-specific)
+        id_names = {}
+        if 'id_names' in data and isinstance(data['id_names'], dict):
+            for id_key, name in data['id_names'].items():
+                try:
+                    id_num = int(id_key)
+                    if 0 <= id_num <= 15:
+                        id_names[id_num] = str(name)
+                    else:
+                        validation.add_warning(
+                            ValidationCode.MK2_ADDR_RANGE,
+                            f"ID {id_num} out of range (0-15), skipping"
+                        )
+                except (ValueError, TypeError):
+                    validation.add_warning(
+                        ValidationCode.KEY_FORMAT,
+                        f"Invalid ID in id_names: {id_key}"
+                    )
+
+        # Parse base_address (MK2-specific)
+        base_address = None
+        if 'base_address' in data:
+            try:
+                ba = data['base_address']
+                base_address = int(ba, 16) if isinstance(ba, str) else int(ba)
+            except (ValueError, TypeError):
+                validation.add_warning(
+                    ValidationCode.INVALID_BASE_ADDRESS,
+                    f"Invalid base_address: {data['base_address']}"
+                )
+
+        # Parse events
+        for key, value in data.items():
+            # Skip metadata keys
+            if key in ['sources', 'id_names', 'base_address']:
+                continue
+
+            # Validate event data structure
+            if not isinstance(value, dict):
+                validation.add_error(
+                    ValidationCode.KEY_FORMAT,
+                    f"Event '{key}' must be a dictionary",
+                    location=source
+                )
+                continue
+
+            try:
+                # Normalize the key
+                normalized_key = cls.normalize_key(key)
+
+                # Check for duplicates
+                if normalized_key in seen_keys:
+                    validation.add_error(
+                        ValidationCode.DUPLICATE_KEY,
+                        f"Duplicate key: {normalized_key} (original: {key})",
+                        location=source
+                    )
+                    continue
+
+                seen_keys.add(normalized_key)
+
+                # Create event info
+                event_info = EventInfo(
+                    source=value.get('event_source', 'unknown'),
+                    description=value.get('description', ''),
+                    info=value.get('info', '')
+                )
+
+                # Create MK2 event
+                event = Mk2Event(key=normalized_key, info=event_info)
+                events[normalized_key] = event
+
+            except ValueError as e:
+                validation.add_error(
+                    ValidationCode.MK2_ADDR_RANGE,
+                    f"Invalid MK2 key '{key}': {e}",
+                    location=source
+                )
+
+        # Return events and MK2-specific extra data
+        extra_data = {
+            'id_names': id_names,
+            'base_address': base_address
+        }
+
+        return events, extra_data
+
+    @classmethod
+    def _create_instance(cls, sources: list[EventSource], events: Dict[EventKey, Event], extra_data: Dict[str, Any]) -> 'Mk2Format':
+        """Create Mk2Format instance.
+
+        Args:
+            sources: Parsed sources
+            events: Parsed events
+            extra_data: MK2-specific data (id_names, base_address)
+
+        Returns:
+            Mk2Format instance
+        """
+        return cls(
+            sources=sources,
+            events=events,
+            id_names=extra_data.get('id_names', {}),
+            base_address=extra_data.get('base_address')
+        )
