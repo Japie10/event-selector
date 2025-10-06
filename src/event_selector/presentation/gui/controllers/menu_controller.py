@@ -124,7 +124,7 @@ class MenuController:
         # Problems dock
         self.actions['toggle_problems'] = QAction("&Problems", self.window)
         self.actions['toggle_problems'].setCheckable(True)
-        self.actions['toggle_problems'].setChecked(True)
+        self.actions['toggle_problems'].setChecked(False)
         self.actions['toggle_problems'].triggered.connect(self._toggle_problems_dock)
         view_menu.addAction(self.actions['toggle_problems'])
 
@@ -316,10 +316,12 @@ class MenuController:
 
     def _toggle_problems_dock(self):
         """Toggle problems dock visibility."""
-        if self.window.problems_dock.isVisible():
-            self.window.problems_dock.hide()
-        else:
-            self.window.problems_dock.show()
+        self.window.toggle_problems_dock()
+        
+        # Update checked state
+        self.actions['toggle_problems'].setChecked(
+            self.window.problems_dock.isVisible()
+    )
 
     def _show_about(self):
         """Show about dialog."""

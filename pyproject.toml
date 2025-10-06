@@ -65,7 +65,7 @@ Issues = "https://github.com/yourusername/event-selector/issues"
 Changelog = "https://github.com/yourusername/event-selector/blob/main/CHANGELOG.md"
 
 [project.scripts]
-event-selector = "event_selector.cli.app:main"
+event-selector = "event_selector.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

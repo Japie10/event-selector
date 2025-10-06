@@ -16,7 +16,9 @@ from event_selector.presentation.gui.views.project_view import ProjectView
 from event_selector.presentation.gui.widgets.mode_switch import ModeSwitchWidget
 from event_selector.presentation.gui.widgets.problems_dock import ProblemsDock
 from event_selector.shared.types import MaskMode
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 class MainWindow(QMainWindow):
     """Main application window - coordination only."""
@@ -49,6 +51,7 @@ class MainWindow(QMainWindow):
 
         # Initialize UI
         self._setup_ui()
+        self._setup_problems_dock()
         self._setup_autosave()
 
         # Restore session
@@ -89,12 +92,19 @@ class MainWindow(QMainWindow):
 
     def _setup_problems_dock(self):
         """Setup problems dock widget."""
-        from PyQt5.QtWidgets import QDockWidget
-
-        self.problems_dock = QDockWidget("Problems", self)
-        self.problems_widget = ProblemsDock()
-        self.problems_dock.setWidget(self.problems_widget)
+        # Create problems dock
+        self.problems_dock = ProblemsDock(self)
+        
+        # Add to main window (bottom by default)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.problems_dock)
+        
+        # Connect signal for jumping to problems
+        self.problems_dock.problem_clicked.connect(self._on_problem_clicked)
+        
+        # Initially hidden (shows automatically when problems occur)
+        self.problems_dock.hide()
+        
+        logger.debug("Problems dock initialized")
 
     def _setup_autosave(self):
         """Setup autosave timer."""
@@ -153,19 +163,17 @@ class MainWindow(QMainWindow):
         if isinstance(widget, ProjectView):
             self.project_controller.close_project(widget.project_id)
 
-    def _on_mode_changed(self, mode: str):
-        """Handle mode change.
-
+    def _on_mode_changed(self, mode: MaskMode):
+        """Handle mode switch.
+        
         Args:
-            mode: New mode (event or capture)
+            mode: New mask mode
         """
-        self.current_mode = MaskMode(mode)
-
-        # Notify all project views
-        for view in self.project_views.values():
-            view.set_mode(self.current_mode)
-
-        self.mode_changed.emit(mode)
+        self.current_mode = mode
+        
+        # Update all open projects
+        for project_id, project_view in self.project_views.items():
+            project_view.set_mode(mode)
 
     def closeEvent(self, event):
         """Handle window close event.
@@ -175,3 +183,19 @@ class MainWindow(QMainWindow):
         """
         self.project_controller.autosave()
         event.accept()
+
+    def show_problems_dock(self):
+        """Show the problems dock."""
+        self.problems_dock.show()
+        self.problems_dock.raise_()
+
+    def hide_problems_dock(self):
+        """Hide the problems dock."""
+        self.problems_dock.hide()
+
+    def toggle_problems_dock(self):
+        """Toggle problems dock visibility."""
+        if self.problems_dock.isVisible():
+            self.hide_problems_dock()
+        else:
+            self.show_problems_dock()

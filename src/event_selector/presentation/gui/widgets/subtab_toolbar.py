@@ -1,24 +1,34 @@
-"""Subtab toolbar - Per-subtab controls for selection and undo/redo."""
+"""Subtab toolbar with per-subtab undo/redo controls."""
 
-from typing import TYPE_CHECKING
+from typing import Optional
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLabel
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (
+    QToolBar, QAction, QLabel, QWidget, QHBoxLayout
+)
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QKeySequence
 
-if TYPE_CHECKING:
-    from event_selector.presentation.gui.views.subtab_view import SubtabView
+from event_selector.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 
-class SubtabToolbar(QWidget):
-    """Toolbar with per-subtab controls.
+class SubtabToolbar(QToolBar):
+    """Toolbar for subtab with undo/redo and selection controls.
     
-    Contains:
+    Each subtab has its own toolbar with:
     - Undo/Redo buttons
-    - Select All / Clear All
-    - Select Errors
-    - Select Syncs
-    - Checked event counter
+    - Select All / Clear All buttons
+    - Select Errors / Select Syncs buttons (if applicable)
+    - Event counter (e.g., "5 / 128 selected")
+    
+    Signals:
+        undo_clicked: Emitted when undo button clicked
+        redo_clicked: Emitted when redo button clicked
+        select_all_clicked: Emitted when select all button clicked
+        clear_all_clicked: Emitted when clear all button clicked
+        select_errors_clicked: Emitted when select errors button clicked
+        select_syncs_clicked: Emitted when select syncs button clicked
     """
     
     # Signals
@@ -29,157 +39,129 @@ class SubtabToolbar(QWidget):
     select_errors_clicked = pyqtSignal()
     select_syncs_clicked = pyqtSignal()
     
-    def __init__(self, parent: 'SubtabView' = None):
+    def __init__(self, subtab_name: str, parent: Optional[QWidget] = None):
         """Initialize subtab toolbar.
         
         Args:
-            parent: Parent SubtabView
+            subtab_name: Name of the subtab
+            parent: Parent widget
         """
-        super().__init__(parent)
-        self.subtab_view = parent
-        self._init_ui()
+        super().__init__(f"{subtab_name} Controls", parent)
+        
+        self.subtab_name = subtab_name
+        self._has_errors = False
+        self._has_syncs = False
+        
+        self._setup_ui()
     
-    def _init_ui(self):
-        """Initialize UI."""
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(5, 2, 5, 2)
-        layout.setSpacing(5)
+    def _setup_ui(self) -> None:
+        """Setup toolbar UI."""
+        # Make toolbar non-movable and non-floatable
+        self.setMovable(False)
+        self.setFloatable(False)
         
-        # Undo/Redo group
-        self.undo_btn = self._create_button("↶", "Undo (Ctrl+Z)")
-        self.undo_btn.clicked.connect(self.undo_clicked.emit)
-        layout.addWidget(self.undo_btn)
+        # Undo action
+        self.undo_action = QAction("↶ Undo", self)
+        self.undo_action.setShortcut(QKeySequence.Undo)
+        self.undo_action.setEnabled(False)
+        self.undo_action.triggered.connect(self.undo_clicked.emit)
+        self.addAction(self.undo_action)
         
-        self.redo_btn = self._create_button("↷", "Redo (Ctrl+Y)")
-        self.redo_btn.clicked.connect(self.redo_clicked.emit)
-        layout.addWidget(self.redo_btn)
+        # Redo action
+        self.redo_action = QAction("↷ Redo", self)
+        self.redo_action.setShortcut(QKeySequence.Redo)
+        self.redo_action.setEnabled(False)
+        self.redo_action.triggered.connect(self.redo_clicked.emit)
+        self.addAction(self.redo_action)
         
-        # Separator
-        layout.addWidget(self._create_separator())
+        self.addSeparator()
         
-        # Selection group
-        self.select_all_btn = self._create_button("Select All", "Select all events (Ctrl+A)")
-        self.select_all_btn.clicked.connect(self.select_all_clicked.emit)
-        layout.addWidget(self.select_all_btn)
+        # Select All action
+        self.select_all_action = QAction("Select All", self)
+        self.select_all_action.setShortcut(QKeySequence.SelectAll)
+        self.select_all_action.triggered.connect(self.select_all_clicked.emit)
+        self.addAction(self.select_all_action)
         
-        self.clear_all_btn = self._create_button("Clear All", "Clear all events (Ctrl+Shift+A)")
-        self.clear_all_btn.clicked.connect(self.clear_all_clicked.emit)
-        layout.addWidget(self.clear_all_btn)
+        # Clear All action
+        self.clear_all_action = QAction("Clear All", self)
+        self.clear_all_action.setShortcut(QKeySequence("Ctrl+Shift+A"))
+        self.clear_all_action.triggered.connect(self.clear_all_clicked.emit)
+        self.addAction(self.clear_all_action)
         
-        # Separator
-        layout.addWidget(self._create_separator())
+        self.addSeparator()
         
-        # Special selections
-        self.select_errors_btn = self._create_button("Errors", "Select all error events (Ctrl+E)")
-        self.select_errors_btn.clicked.connect(self.select_errors_clicked.emit)
-        layout.addWidget(self.select_errors_btn)
+        # Select Errors action
+        self.select_errors_action = QAction("Select Errors", self)
+        self.select_errors_action.setShortcut(QKeySequence("Ctrl+E"))
+        self.select_errors_action.setEnabled(False)  # Disabled until errors exist
+        self.select_errors_action.triggered.connect(self.select_errors_clicked.emit)
+        self.addAction(self.select_errors_action)
         
-        self.select_syncs_btn = self._create_button("Syncs", "Select all sync events (Ctrl+S)")
-        self.select_syncs_btn.clicked.connect(self.select_syncs_clicked.emit)
-        layout.addWidget(self.select_syncs_btn)
+        # Select Syncs action
+        self.select_syncs_action = QAction("Select Syncs", self)
+        self.select_syncs_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        self.select_syncs_action.setEnabled(False)  # Disabled until syncs exist
+        self.select_syncs_action.triggered.connect(self.select_syncs_clicked.emit)
+        self.addAction(self.select_syncs_action)
         
-        # Separator
-        layout.addWidget(self._create_separator())
+        self.addSeparator()
         
-        # Event counter
+        # Event counter label
         self.counter_label = QLabel("0 / 0 selected")
-        self.counter_label.setStyleSheet("padding: 0 5px; font-weight: bold;")
-        layout.addWidget(self.counter_label)
-        
-        # Stretch to push everything left
-        layout.addStretch()
-        
-        # Style the toolbar
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #f8f8f8;
-                border-bottom: 1px solid #ddd;
-            }
-            QToolButton {
-                padding: 4px 8px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-            QToolButton:hover {
-                background-color: #e7f3ff;
-                border-color: #007ACC;
-            }
-            QToolButton:pressed {
-                background-color: #cce4ff;
-            }
-            QToolButton:disabled {
-                color: #999;
-                background-color: #f0f0f0;
-                border-color: #ddd;
-            }
-        """)
+        self.counter_label.setStyleSheet("padding: 0 10px;")
+        self.addWidget(self.counter_label)
     
-    def _create_button(self, text: str, tooltip: str) -> QToolButton:
-        """Create a toolbar button.
-        
-        Args:
-            text: Button text
-            tooltip: Tooltip text
-            
-        Returns:
-            QToolButton instance
-        """
-        btn = QToolButton()
-        btn.setText(text)
-        btn.setToolTip(tooltip)
-        return btn
-    
-    def _create_separator(self) -> QWidget:
-        """Create a vertical separator.
-        
-        Returns:
-            Separator widget
-        """
-        separator = QWidget()
-        separator.setFixedWidth(1)
-        separator.setStyleSheet("background-color: #ccc;")
-        return separator
-    
-    def update_counter(self, checked: int, total: int):
-        """Update the event counter.
-        
-        Args:
-            checked: Number of checked events
-            total: Total number of events
-        """
-        self.counter_label.setText(f"{checked} / {total} selected")
-    
-    def update_undo_redo_state(self, can_undo: bool, can_redo: bool, 
-                               undo_desc: str = None, redo_desc: str = None):
-        """Update undo/redo button states.
+    def update_undo_state(self, can_undo: bool, description: Optional[str] = None) -> None:
+        """Update undo button state.
         
         Args:
             can_undo: Whether undo is available
-            can_redo: Whether redo is available
-            undo_desc: Description of undo action
-            redo_desc: Description of redo action
+            description: Optional description for tooltip
         """
-        self.undo_btn.setEnabled(can_undo)
-        self.redo_btn.setEnabled(can_redo)
+        self.undo_action.setEnabled(can_undo)
         
-        # Update tooltips with descriptions
-        if can_undo and undo_desc:
-            self.undo_btn.setToolTip(f"Undo: {undo_desc} (Ctrl+Z)")
+        if can_undo and description:
+            self.undo_action.setToolTip(f"Undo: {description}")
         else:
-            self.undo_btn.setToolTip("Undo (Ctrl+Z)")
-        
-        if can_redo and redo_desc:
-            self.redo_btn.setToolTip(f"Redo: {redo_desc} (Ctrl+Y)")
-        else:
-            self.redo_btn.setToolTip("Redo (Ctrl+Y)")
+            self.undo_action.setToolTip("Undo (Ctrl+Z)")
     
-    def update_selection_buttons(self, has_errors: bool, has_syncs: bool):
-        """Update selection button states based on available events.
+    def update_redo_state(self, can_redo: bool, description: Optional[str] = None) -> None:
+        """Update redo button state.
         
         Args:
-            has_errors: Whether there are error events
-            has_syncs: Whether there are sync events
+            can_redo: Whether redo is available
+            description: Optional description for tooltip
         """
-        self.select_errors_btn.setEnabled(has_errors)
-        self.select_syncs_btn.setEnabled(has_syncs)
+        self.redo_action.setEnabled(can_redo)
+        
+        if can_redo and description:
+            self.redo_action.setToolTip(f"Redo: {description}")
+        else:
+            self.redo_action.setToolTip("Redo (Ctrl+Y)")
+    
+    def update_counter(self, selected: int, total: int) -> None:
+        """Update event counter display.
+        
+        Args:
+            selected: Number of selected events
+            total: Total number of events
+        """
+        self.counter_label.setText(f"{selected} / {total} selected")
+    
+    def set_has_errors(self, has_errors: bool) -> None:
+        """Enable/disable Select Errors button.
+        
+        Args:
+            has_errors: Whether this subtab has error events
+        """
+        self._has_errors = has_errors
+        self.select_errors_action.setEnabled(has_errors)
+    
+    def set_has_syncs(self, has_syncs: bool) -> None:
+        """Enable/disable Select Syncs button.
+        
+        Args:
+            has_syncs: Whether this subtab has sync events
+        """
+        self._has_syncs = has_syncs
+        self.select_syncs_action.setEnabled(has_syncs)

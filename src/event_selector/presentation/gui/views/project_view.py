@@ -1,14 +1,13 @@
-"""Project view - UPDATED to connect subtab toolbar signals."""
+"""Project view - coordinates subtabs with per-subtab undo/redo."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QTabWidget, QLabel, QMessageBox
-)
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QMessageBox
 from PyQt5.QtCore import pyqtSignal
 
 from event_selector.application.facades.event_selector_facade import EventSelectorFacade
+from event_selector.application.base import SubtabContext
 from event_selector.presentation.gui.view_models.project_vm import ProjectViewModel
 from event_selector.presentation.gui.views.subtab_view import SubtabView
 from event_selector.shared.types import MaskMode, EventKey
@@ -18,10 +17,11 @@ logger = get_logger(__name__)
 
 
 class ProjectView(QWidget):
-    """View for a single project - coordinates subtabs."""
+    """View for a single project - coordinates subtabs with independent undo/redo."""
 
     # Signals
     status_message = pyqtSignal(str)
+    tab_switch_requested = pyqtSignal(int)  # NEW: for auto tab switching
 
     def __init__(self, 
                  view_model: ProjectViewModel,
@@ -39,392 +39,300 @@ class ProjectView(QWidget):
         self.view_model = view_model
         self.facade = facade
         self.project_id = view_model.project_id
-        self.subtab_views = []
+        self.subtab_views: Dict[str, SubtabView] = {}
+        self.current_mode = MaskMode.EVENT
 
         self._init_ui()
+        self._setup_tab_switch_callback()
 
     def _init_ui(self):
         """Initialize UI."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Sources banner
-        if self.view_model.sources:
-            sources_text = "These events are used for: " + ", ".join(
-                self.view_model.sources
-            )
-            label = QLabel(sources_text)
-            label.setStyleSheet(
-                "QLabel { background-color: #f0f0f0; padding: 5px; }"
-            )
-            layout.addWidget(label)
-
-        # Subtab widget
+        # Create tab widget for subtabs
         self.tab_widget = QTabWidget()
-        self.tab_widget.currentChanged.connect(self._on_subtab_changed)
+        self.tab_widget.currentChanged.connect(self._on_tab_changed)
         layout.addWidget(self.tab_widget)
 
-        # Create subtab views with toolbars
-        for subtab_vm in self.view_model.subtabs:
-            subtab_view = SubtabView(subtab_vm, self)
+        # Create a subtab view for each subtab in the view model
+        for idx, subtab_vm in enumerate(self.view_model.subtabs):
+            subtab_view = SubtabView(
+                project_id=self.project_id,
+                subtab_name=subtab_vm.name,
+                subtab_index=idx,
+                parent=self
+            )
             
-            # Connect all subtab signals
-            subtab_view.event_toggled.connect(self._on_event_toggled)
-            subtab_view.undo_requested.connect(self.undo)
-            subtab_view.redo_requested.connect(self.redo)
-            subtab_view.select_all_requested.connect(self.select_all)
-            subtab_view.clear_all_requested.connect(self.clear_all)
-            subtab_view.select_errors_requested.connect(self.select_errors)
-            subtab_view.select_syncs_requested.connect(self.select_syncs)
-
+            # Store reference
+            self.subtab_views[subtab_vm.name] = subtab_view
+            
+            # Connect toolbar signals to handlers
+            self._connect_subtab_signals(subtab_view)
+            
+            # Add to tab widget
             self.tab_widget.addTab(subtab_view, subtab_vm.name)
-            self.subtab_views.append(subtab_view)
-        
-        # Update undo/redo state for initial subtab
-        if self.subtab_views:
-            self._update_current_subtab_undo_state()
+            
+            # Initial refresh
+            subtab_view.refresh_from_model(subtab_vm, self.current_mode)
+            
+            # Update initial undo/redo state
+            self._update_subtab_undo_redo_state(subtab_vm.name)
 
-    def _on_subtab_changed(self, index: int):
-        """Handle subtab change.
+    def _setup_tab_switch_callback(self):
+        """Setup callback for auto tab switching on undo/redo."""
+        def switch_callback(subtab_name: str, subtab_index: int):
+            """Called when undo/redo needs to switch tabs."""
+            logger.debug(f"Auto-switching to subtab: {subtab_name} (index {subtab_index})")
+            self.tab_widget.setCurrentIndex(subtab_index)
+        
+        self.facade.set_tab_switch_callback(self.project_id, switch_callback)
+
+    def _connect_subtab_signals(self, subtab_view: SubtabView):
+        """Connect subtab toolbar signals to command handlers.
         
         Args:
-            index: New subtab index
+            subtab_view: The subtab view to connect
         """
-        if 0 <= index < len(self.subtab_views):
-            subtab_view = self.subtab_views[index]
-            subtab_name = subtab_view.view_model.name
-            
-            # Notify facade of active subtab change
-            self.facade.set_active_subtab(self.project_id, subtab_name)
-            
-            # Update undo/redo state for new subtab
-            self._update_current_subtab_undo_state()
-            
-            logger.debug(f"Active subtab changed to: {subtab_name}")
+        toolbar = subtab_view.toolbar
+        
+        # Undo/Redo
+        toolbar.undo_clicked.connect(
+            lambda: self._handle_undo(subtab_view)
+        )
+        toolbar.redo_clicked.connect(
+            lambda: self._handle_redo(subtab_view)
+        )
+        
+        # Selection operations
+        toolbar.select_all_clicked.connect(
+            lambda: self._handle_select_all(subtab_view)
+        )
+        toolbar.clear_all_clicked.connect(
+            lambda: self._handle_clear_all(subtab_view)
+        )
+        toolbar.select_errors_clicked.connect(
+            lambda: self._handle_select_errors(subtab_view)
+        )
+        toolbar.select_syncs_clicked.connect(
+            lambda: self._handle_select_syncs(subtab_view)
+        )
+        
+        # Event toggling
+        subtab_view.event_toggled.connect(
+            lambda event_key: self._handle_event_toggle(subtab_view, event_key)
+        )
 
-    def _update_current_subtab_undo_state(self):
-        """Update undo/redo state for current subtab."""
-        current_view = self._get_current_subtab_view()
-        if not current_view:
+    def _handle_undo(self, subtab_view: SubtabView):
+        """Handle undo button click.
+        
+        Args:
+            subtab_view: The subtab where undo was clicked
+        """
+        context = subtab_view.get_context()
+        
+        try:
+            description = self.facade.undo(self.project_id, context)
+            
+            if description:
+                self.status_message.emit(f"Undone: {description}")
+                
+                # Refresh all subtabs (the command may have affected this or another subtab)
+                self._refresh_all_subtabs()
+                
+                # Update undo/redo states for all subtabs
+                self._update_all_undo_redo_states()
+            else:
+                self.status_message.emit("Nothing to undo")
+                
+        except Exception as e:
+            logger.error(f"Undo failed: {e}", exc_info=True)
+            QMessageBox.warning(self, "Undo Failed", str(e))
+
+    def _handle_redo(self, subtab_view: SubtabView):
+        """Handle redo button click.
+        
+        Args:
+            subtab_view: The subtab where redo was clicked
+        """
+        context = subtab_view.get_context()
+        
+        try:
+            description = self.facade.redo(self.project_id, context)
+            
+            if description:
+                self.status_message.emit(f"Redone: {description}")
+                self._refresh_all_subtabs()
+                self._update_all_undo_redo_states()
+            else:
+                self.status_message.emit("Nothing to redo")
+                
+        except Exception as e:
+            logger.error(f"Redo failed: {e}", exc_info=True)
+            QMessageBox.warning(self, "Redo Failed", str(e))
+
+    def _handle_select_all(self, subtab_view: SubtabView):
+        """Handle select all button click.
+        
+        Args:
+            subtab_view: The subtab where select all was clicked
+        """
+        context = subtab_view.get_context()
+        
+        try:
+            self.facade.select_all_events(
+                self.project_id, 
+                self.current_mode, 
+                context
+            )
+            
+            self.status_message.emit(f"Selected all events in {subtab_view.subtab_name}")
+            self._refresh_subtab(subtab_view.subtab_name)
+            self._update_subtab_undo_redo_state(subtab_view.subtab_name)
+            
+        except Exception as e:
+            logger.error(f"Select all failed: {e}", exc_info=True)
+            QMessageBox.warning(self, "Select All Failed", str(e))
+
+    def _handle_clear_all(self, subtab_view: SubtabView):
+        """Handle clear all button click.
+        
+        Args:
+            subtab_view: The subtab where clear all was clicked
+        """
+        context = subtab_view.get_context()
+        
+        try:
+            self.facade.clear_all_events(
+                self.project_id, 
+                self.current_mode, 
+                context
+            )
+            
+            self.status_message.emit(f"Cleared all events in {subtab_view.subtab_name}")
+            self._refresh_subtab(subtab_view.subtab_name)
+            self._update_subtab_undo_redo_state(subtab_view.subtab_name)
+            
+        except Exception as e:
+            logger.error(f"Clear all failed: {e}", exc_info=True)
+            QMessageBox.warning(self, "Clear All Failed", str(e))
+
+    def _handle_select_errors(self, subtab_view: SubtabView):
+        """Handle select errors button click.
+        
+        Args:
+            subtab_view: The subtab where select errors was clicked
+        """
+        # TODO: Implement SelectErrorsCommand
+        self.status_message.emit("Select errors not yet implemented")
+
+    def _handle_select_syncs(self, subtab_view: SubtabView):
+        """Handle select syncs button click.
+        
+        Args:
+            subtab_view: The subtab where select syncs was clicked
+        """
+        # TODO: Implement SelectSyncsCommand
+        self.status_message.emit("Select syncs not yet implemented")
+
+    def _handle_event_toggle(self, subtab_view: SubtabView, event_key: EventKey):
+        """Handle event toggle from table.
+        
+        Args:
+            subtab_view: The subtab where event was toggled
+            event_key: Key of the toggled event
+        """
+        context = subtab_view.get_context()
+        
+        try:
+            self.facade.toggle_event(
+                self.project_id,
+                event_key,
+                self.current_mode,
+                context
+            )
+            
+            # Refresh just this subtab
+            self._refresh_subtab(subtab_view.subtab_name)
+            self._update_subtab_undo_redo_state(subtab_view.subtab_name)
+            
+        except Exception as e:
+            logger.error(f"Toggle event failed: {e}", exc_info=True)
+
+    def _on_tab_changed(self, index: int):
+        """Handle tab change.
+        
+        Args:
+            index: New tab index
+        """
+        if index >= 0 and index < len(self.view_model.subtabs):
+            subtab_name = self.view_model.subtabs[index].name
+            logger.debug(f"Switched to subtab: {subtab_name}")
+            
+            # Update undo/redo state for the new current tab
+            self._update_subtab_undo_redo_state(subtab_name)
+
+    def _refresh_subtab(self, subtab_name: str):
+        """Refresh a single subtab from the domain model.
+        
+        Args:
+            subtab_name: Name of subtab to refresh
+        """
+        if subtab_name not in self.subtab_views:
             return
         
-        subtab_name = current_view.view_model.name
+        # Get updated view model for this subtab
+        subtab_vm = next(
+            (st for st in self.view_model.subtabs if st.name == subtab_name),
+            None
+        )
         
-        # Get undo/redo state from facade
+        if subtab_vm:
+            self.subtab_views[subtab_name].refresh_from_model(
+                subtab_vm, 
+                self.current_mode
+            )
+
+    def _refresh_all_subtabs(self):
+        """Refresh all subtabs from the domain model."""
+        for subtab_vm in self.view_model.subtabs:
+            self._refresh_subtab(subtab_vm.name)
+
+    def _update_subtab_undo_redo_state(self, subtab_name: str):
+        """Update undo/redo button states for a subtab.
+        
+        Args:
+            subtab_name: Name of subtab to update
+        """
+        if subtab_name not in self.subtab_views:
+            return
+        
+        subtab_view = self.subtab_views[subtab_name]
+        
+        # Get undo/redo availability and descriptions
         can_undo = self.facade.can_undo(self.project_id, subtab_name)
         can_redo = self.facade.can_redo(self.project_id, subtab_name)
+        
         undo_desc = self.facade.get_undo_description(self.project_id, subtab_name)
         redo_desc = self.facade.get_redo_description(self.project_id, subtab_name)
         
-        # Update current subtab toolbar
-        current_view.update_undo_redo_state(can_undo, can_redo, undo_desc, redo_desc)
+        # Update the toolbar
+        subtab_view.update_undo_redo_state(
+            can_undo, can_redo, undo_desc, redo_desc
+        )
 
-    # Event Operations
-    def _on_event_toggled(self, event_key: EventKey):
-        """Handle event toggle from subtab."""
-        current_view = self._get_current_subtab_view()
-        if not current_view:
-            return
-        
-        subtab_name = current_view.view_model.name
-        mode = self.view_model.current_mode
-        
-        self.facade.toggle_event(self.project_id, event_key, mode, subtab_name)
+    def _update_all_undo_redo_states(self):
+        """Update undo/redo states for all subtabs."""
+        for subtab_vm in self.view_model.subtabs:
+            self._update_subtab_undo_redo_state(subtab_vm.name)
 
-        # Update view model
-        project = self.facade.get_project(self.project_id)
-        self.view_model.refresh_from_project(project)
-
-        # Refresh current subtab
-        current_view.refresh()
-        
-        # Update undo/redo state
-        self._update_current_subtab_undo_state()
-        
-        self.status_message.emit(f"Toggled {event_key}")
-
-    def undo(self):
-        """Undo last operation in current subtab."""
-        result = self.facade.undo(self.project_id)
-        if result:
-            description, subtab_name = result
-            
-            # Switch to target subtab if different
-            self._switch_to_subtab(subtab_name)
-            
-            # Refresh view
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            self.refresh()
-            
-            # Update undo/redo state
-            self._update_current_subtab_undo_state()
-            
-            self.status_message.emit(f"Undone: {description}")
-        else:
-            self.status_message.emit("Nothing to undo")
-
-    def redo(self):
-        """Redo last undone operation in current subtab."""
-        result = self.facade.redo(self.project_id)
-        if result:
-            description, subtab_name = result
-            
-            # Switch to target subtab if different
-            self._switch_to_subtab(subtab_name)
-            
-            # Refresh view
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            self.refresh()
-            
-            # Update undo/redo state
-            self._update_current_subtab_undo_state()
-            
-            self.status_message.emit(f"Redone: {description}")
-        else:
-            self.status_message.emit("Nothing to redo")
-
-    def _switch_to_subtab(self, subtab_name: str):
-        """Switch to a specific subtab.
+    def set_mode(self, mode: MaskMode):
+        """Change the active mask mode.
         
         Args:
-            subtab_name: Name of subtab to switch to
+            mode: New mask mode (EVENT or CAPTURE)
         """
-        for i, subtab_view in enumerate(self.subtab_views):
-            if subtab_view.view_model.name == subtab_name:
-                if self.tab_widget.currentIndex() != i:
-                    self.tab_widget.setCurrentIndex(i)
-                    logger.info(f"Switched to subtab '{subtab_name}'")
-                break
-
-    # Bulk Operations (work on current subtab)
-    def select_all(self):
-        """Select all events in current subtab."""
-        current_view = self._get_current_subtab_view()
-        if current_view:
-            subtab_name = current_view.view_model.name
-            self.facade.select_all_events(
-                self.project_id, 
-                self.view_model.current_mode,
-                subtab_name
-            )
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            current_view.refresh()
-            self._update_current_subtab_undo_state()
-            self.status_message.emit(f"Selected all in {subtab_name}")
-
-    def clear_all(self):
-        """Clear all events in current subtab."""
-        current_view = self._get_current_subtab_view()
-        if current_view:
-            subtab_name = current_view.view_model.name
-            self.facade.clear_all_events(
-                self.project_id,
-                self.view_model.current_mode,
-                subtab_name
-            )
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            current_view.refresh()
-            self._update_current_subtab_undo_state()
-            self.status_message.emit(f"Cleared all in {subtab_name}")
-
-    def select_errors(self):
-        """Select all error events in current subtab."""
-        current_view = self._get_current_subtab_view()
-        if current_view:
-            error_events = current_view.view_model.get_error_events()
-            if error_events:
-                to_toggle = [e.key for e in error_events if not e.is_checked]
-
-                if to_toggle:
-                    subtab_name = current_view.view_model.name
-                    self.facade.toggle_events(
-                        self.project_id,
-                        to_toggle,
-                        self.view_model.current_mode,
-                        subtab_name
-                    )
-                    project = self.facade.get_project(self.project_id)
-                    self.view_model.refresh_from_project(project)
-                    current_view.refresh()
-                    self._update_current_subtab_undo_state()
-                    self.status_message.emit(
-                        f"Selected {len(to_toggle)} error events"
-                    )
-                else:
-                    self.status_message.emit("All error events already selected")
-            else:
-                self.status_message.emit("No error events found")
-
-    def select_syncs(self):
-        """Select all sync events in current subtab."""
-        current_view = self._get_current_subtab_view()
-        if current_view:
-            sync_events = current_view.view_model.get_sync_events()
-            if sync_events:
-                to_toggle = [e.key for e in sync_events if not e.is_checked]
-
-                if to_toggle:
-                    subtab_name = current_view.view_model.name
-                    self.facade.toggle_events(
-                        self.project_id,
-                        to_toggle,
-                        self.view_model.current_mode,
-                        subtab_name
-                    )
-                    project = self.facade.get_project(self.project_id)
-                    self.view_model.refresh_from_project(project)
-                    current_view.refresh()
-                    self._update_current_subtab_undo_state()
-                    self.status_message.emit(
-                        f"Selected {len(to_toggle)} sync events"
-                    )
-                else:
-                    self.status_message.emit("All sync events already selected")
-            else:
-                self.status_message.emit("No sync events found")
-
-    # Global Operations (work across all subtabs) - will be called from menu
-    def select_all_errors_globally(self):
-        """Select all error events across ALL subtabs."""
-        total_selected = 0
-        
-        for subtab_view in self.subtab_views:
-            error_events = subtab_view.view_model.get_error_events()
-            to_toggle = [e.key for e in error_events if not e.is_checked]
-            
-            if to_toggle:
-                subtab_name = subtab_view.view_model.name
-                self.facade.toggle_events(
-                    self.project_id,
-                    to_toggle,
-                    self.view_model.current_mode,
-                    subtab_name
-                )
-                total_selected += len(to_toggle)
-        
-        if total_selected > 0:
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            self.refresh()
-            self.status_message.emit(
-                f"Selected {total_selected} error events across all tabs"
-            )
-        else:
-            self.status_message.emit("All error events already selected")
-
-    # Import/Export Operations
-    def import_mask(self, file_path: Path):
-        """Import mask file."""
-        try:
-            validation = self.facade.import_mask(
-                self.project_id,
-                file_path,
-                MaskMode.EVENT
-            )
-            
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            self.refresh()
-            
-            if validation.has_warnings or validation.has_errors:
-                msg = "Mask imported with issues:\n\n"
-                for issue in validation.get_all_issues():
-                    msg += f"{issue.level.value}: {issue.message}\n"
-                QMessageBox.warning(self, "Import Warnings", msg)
-            else:
-                self.status_message.emit(f"Mask imported from {file_path.name}")
-                
-        except Exception as e:
-            raise
-
-    def import_capture(self, file_path: Path):
-        """Import capture mask file."""
-        try:
-            validation = self.facade.import_mask(
-                self.project_id,
-                file_path,
-                MaskMode.CAPTURE
-            )
-            
-            project = self.facade.get_project(self.project_id)
-            self.view_model.refresh_from_project(project)
-            self.refresh()
-            
-            if validation.has_warnings or validation.has_errors:
-                msg = "Capture mask imported with issues:\n\n"
-                for issue in validation.get_all_issues():
-                    msg += f"{issue.level.value}: {issue.message}\n"
-                QMessageBox.warning(self, "Import Warnings", msg)
-            else:
-                self.status_message.emit(f"Capture mask imported from {file_path.name}")
-                
-        except Exception as e:
-            raise
-
-    def export_mask(self, file_path: Path):
-        """Export event mask file."""
-        try:
-            self.facade.export_mask(
-                self.project_id,
-                file_path,
-                MaskMode.EVENT
-            )
-            self.status_message.emit(f"Event mask exported to {file_path.name}")
-        except Exception as e:
-            raise
-
-    def export_capture(self, file_path: Path):
-        """Export capture mask file."""
-        try:
-            self.facade.export_mask(
-                self.project_id,
-                file_path,
-                MaskMode.CAPTURE
-            )
-            self.status_message.emit(f"Capture mask exported to {file_path.name}")
-        except Exception as e:
-            raise
-
-    def export_both(self, base_path: Path):
-        """Export both mask files."""
-        try:
-            base = base_path.with_suffix('')
-            mask_path = base.with_name(f"{base.name}_event.txt")
-            capture_path = base.with_name(f"{base.name}_capture.txt")
-
-            self.facade.export_both_masks(
-                self.project_id,
-                mask_path,
-                capture_path
-            )
-
-            self.status_message.emit("Exported event and capture mask files")
-        except Exception as e:
-            raise
-
-    # Mode Management
-    def set_mode(self, mode: MaskMode):
-        """Set the current mode."""
-        self.view_model.current_mode = mode
-
-        project = self.facade.get_project(self.project_id)
-        self.view_model.refresh_from_project(project)
-
-        self.refresh()
-
-    def refresh(self):
-        """Refresh all subtab views from view model."""
-        for subtab_view in self.subtab_views:
-            subtab_view.refresh()
-
-    # Helper Methods
-    def _get_current_subtab_view(self) -> Optional[SubtabView]:
-        """Get the currently active subtab view."""
-        widget = self.tab_widget.currentWidget()
-        if isinstance(widget, SubtabView):
-            return widget
-        return None
+        if mode != self.current_mode:
+            self.current_mode = mode
+            self._refresh_all_subtabs()
+            self.status_message.emit(f"Switched to {mode.value} mode")
