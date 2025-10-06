@@ -47,6 +47,7 @@ dev = [
     "hypothesis>=6.0",
     "ruff>=0.1",
     "mypy>=1.0",
+    "loguru-mypy>=0.1",
     "pre-commit>=3.0",
     "build>=1.0",
     "twine>=4.0",
