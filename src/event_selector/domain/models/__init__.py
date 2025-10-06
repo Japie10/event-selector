@@ -7,6 +7,7 @@ from event_selector.domain.models.base import (
     Project,
 )
 from event_selector.domain.models.mk1 import Mk1Event, Mk1Format
+from event_selector.domain.models.mk2 import Mk2Event, Mk2Format
 from event_selector.domain.models.value_objects import (
     EventAddress,
     EventInfo,

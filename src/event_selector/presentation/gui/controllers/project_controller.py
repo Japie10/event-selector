@@ -16,9 +16,6 @@ logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from event_selector.presentation.gui.main_window import MainWindow
-from event_selector.infrastructure.logging import get_logger
-
-logger = get_logger(__name__)
 
 class ProjectController:
     """Handles project lifecycle operations."""
