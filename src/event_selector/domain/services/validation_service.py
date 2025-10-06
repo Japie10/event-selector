@@ -10,7 +10,9 @@ from event_selector.domain.models.base import EventFormat, MaskData
 from event_selector.domain.models.mk1 import Mk1Format
 from event_selector.domain.models.mk2 import Mk2Format
 from event_selector.domain.interfaces.format_strategy import ValidationResult
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 class ValidationService:
     """Service for validating event formats and mask data."""
@@ -24,6 +26,7 @@ class ValidationService:
         Returns:
             ValidationResult with any issues found
         """
+        logger.trace(f"Starting {__name__}...")
         result = ValidationResult()
         
         # Dispatch to appropriate validator
@@ -48,6 +51,7 @@ class ValidationService:
         Returns:
             ValidationResult with any issues found
         """
+        logger.trace(f"Starting {__name__}...")
         result = ValidationResult()
         
         # Check data size
@@ -106,6 +110,7 @@ class ValidationService:
         Returns:
             ValidationResult with any issues found
         """
+        logger.trace(f"Starting {__name__}...")
         result = ValidationResult()
         
         # Check format type matches
@@ -137,6 +142,7 @@ class ValidationService:
     
     def _validate_mk1_format(self, format_obj: Mk1Format, result: ValidationResult):
         """Validate MK1 format specifics."""
+        logger.trace(f"Starting {__name__}...")
         # Check for events in valid ranges
         for key, event in format_obj.events.items():
             addr_value = event.address.value
@@ -170,6 +176,7 @@ class ValidationService:
     
     def _validate_mk2_format(self, format_obj: Mk2Format, result: ValidationResult):
         """Validate MK2 format specifics."""
+        logger.trace(f"Starting {__name__}...")
         # Check events are in valid range
         for key, event in format_obj.events.items():
             if event.id > MK2_MAX_ID:
@@ -217,6 +224,7 @@ class ValidationService:
     
     def _check_mk1_coverage(self, format_obj: Mk1Format, result: ValidationResult):
         """Check MK1 subtab coverage."""
+        logger.trace(f"Starting {__name__}...")
         # Count events per subtab
         subtab_events = {
             "Data": 0,
@@ -246,6 +254,7 @@ class ValidationService:
                               id_num: int,
                               bit_pos: int) -> bool:
         """Check if an event exists at the given ID and bit position."""
+        logger.trace(f"Starting {__name__}...")
         for event in format_obj.events.values():
             coord = event.get_coordinate()
             if coord.id == id_num and coord.bit == bit_pos:

@@ -20,6 +20,7 @@ class MaskImporter:
 
     def __init__(self):
         """Initialize importer."""
+        logger.trace(f"Starting {__name__}...")
         self.validation_result = ValidationResult()
 
     def import_file(self, file_path: Path) -> MaskData:
@@ -35,6 +36,7 @@ class MaskImporter:
             IOError: If file cannot be read
             ValueError: If file format is invalid
         """
+        logger.trace(f"Starting {__name__}...")
         self.validation_result = ValidationResult()
 
         logger.info(f"Importing mask from {file_path}")
@@ -74,6 +76,7 @@ class MaskImporter:
         Returns:
             Dictionary of metadata
         """
+        logger.trace(f"Starting {__name__}...")
         metadata = {}
 
         for line in lines:
@@ -131,6 +134,7 @@ class MaskImporter:
         Returns:
             NumPy array of mask values
         """
+        logger.trace(f"Starting {__name__}...")
         format_type = metadata.get('format', FormatType.MK1)
 
         # Determine expected size
@@ -213,6 +217,7 @@ class MaskImporter:
         Args:
             mask_data: Mask data to validate
         """
+        logger.trace(f"Starting {__name__}...")
         # Check array size
         expected_size = 12 if mask_data.format_type == FormatType.MK1 else 16
 

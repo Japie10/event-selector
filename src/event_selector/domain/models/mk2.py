@@ -12,7 +12,9 @@ from event_selector.domain.models.value_objects import EventInfo, EventSource
 from event_selector.domain.interfaces.format_strategy import (
     ValidationResult, ValidationCode, ValidationLevel
 )
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 @dataclass
 class Mk2Event(Event):
@@ -25,6 +27,7 @@ class Mk2Event(Event):
 
     def __post_init__(self):
         """Parse key into ID and bit."""
+        logger.trace(f"Starting {__name__}...")
         if self._id is None or self._bit is None:
             # Parse key: 0xABC where A = ID high nibble, B = ID low nibble, C = bit
             key_int = int(self.key, 16) if isinstance(self.key, str) else self.key
@@ -33,6 +36,7 @@ class Mk2Event(Event):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
+        logger.trace(f"Starting {__name__}...")
         return {
             "event_source": self.info.source,
             "description": self.info.description,
@@ -41,16 +45,19 @@ class Mk2Event(Event):
 
     def get_coordinate(self) -> EventCoordinate:
         """Get the coordinate (ID, bit) for this event."""
+        logger.trace(f"Starting {__name__}...")
         return EventCoordinate(id=self._id, bit=self._bit)
 
     @property
     def id(self) -> int:
         """Get the ID."""
+        logger.trace(f"Starting {__name__}...")
         return self._id
 
     @property
     def bit(self) -> int:
         """Get the bit position."""
+        logger.trace(f"Starting {__name__}...")
         return self._bit
 
 
@@ -66,6 +73,7 @@ class Mk2Format(EventFormat):
 
     def add_event(self, key: EventKey, info: EventInfo) -> None:
         """Add an event to the format."""
+        logger.trace(f"Starting {__name__}...")
         event = Mk2Event(key=key, info=info)
 
         # Validate ID and bit ranges
@@ -78,11 +86,13 @@ class Mk2Format(EventFormat):
 
     def remove_event(self, key: EventKey) -> None:
         """Remove an event from the format."""
+        logger.trace(f"Starting {__name__}...")
         if key in self.events:
             del self.events[key]
 
     def get_event(self, key: EventKey) -> Optional[Mk2Event]:
         """Get an event by key."""
+        logger.trace(f"Starting {__name__}...")
         return self.events.get(key)
 
     def get_events_by_id(self, id_num: int) -> Dict[EventKey, Mk2Event]:
@@ -94,6 +104,7 @@ class Mk2Format(EventFormat):
         Returns:
             Dictionary of events for that ID
         """
+        logger.trace(f"Starting {__name__}...")
         return {
             key: event 
             for key, event in self.events.items() 
@@ -102,6 +113,7 @@ class Mk2Format(EventFormat):
 
     def validate(self) -> ValidationResult:
         """Validate the format structure."""
+        logger.trace(f"Starting {__name__}...")
         result = ValidationResult()
 
         # Check for duplicate keys
@@ -195,6 +207,7 @@ class Mk2Format(EventFormat):
         Returns:
             Dictionary with subtab configuration
         """
+        logger.trace(f"Starting {__name__}...")
         # Determine which IDs have events
         used_ids = sorted(set(event.id for event in self.events.values()))
 
@@ -226,6 +239,7 @@ class Mk2Format(EventFormat):
         Raises:
             ValueError: If key is invalid or out of range
         """
+        logger.trace(f"Starting {__name__}...")
         if isinstance(key, int):
             value = key
         elif isinstance(key, str):
@@ -259,6 +273,7 @@ class Mk2Format(EventFormat):
             Tuple of (events dict, extra_data dict with id_names and base_address)
         """
         from event_selector.domain.interfaces.format_strategy import ValidationCode
+        logger.trace(f"Starting {__name__}...")
 
         events = {}
         seen_keys = set()
@@ -362,6 +377,7 @@ class Mk2Format(EventFormat):
         Returns:
             Mk2Format instance
         """
+        logger.trace(f"Starting {__name__}...")
         return cls(
             sources=sources,
             events=events,

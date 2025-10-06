@@ -51,6 +51,7 @@ class SessionManager:
         Args:
             session_file: Path to session file (default: .local/autosave.json)
         """
+        logger.trace(f"Starting {__name__}...")
         if session_file is None:
             # Default to .local directory in current working directory
             session_file = Path.cwd() / ".local" / "autosave.json"
@@ -64,6 +65,7 @@ class SessionManager:
         Args:
             session: Session state to save
         """
+        logger.trace(f"Starting {__name__}...")
         try:
             # Add timestamp
             session.timestamp = datetime.now().isoformat()
@@ -92,6 +94,7 @@ class SessionManager:
         Returns:
             SessionState or None if no session exists
         """
+        logger.trace(f"Starting {__name__}...")
         if not self.session_file.exists():
             logger.debug("No session file found")
             return None
@@ -110,6 +113,7 @@ class SessionManager:
 
     def clear_session(self) -> None:
         """Delete the session file."""
+        logger.trace(f"Starting {__name__}...")
         if self.session_file.exists():
             try:
                 self.session_file.unlink()
@@ -123,6 +127,7 @@ class SessionManager:
         Args:
             file_path: Path to file
         """
+        logger.trace(f"Starting {__name__}...")
         session = self.load_session() or SessionState()
 
         if file_path not in session.open_files:
@@ -135,6 +140,7 @@ class SessionManager:
         Args:
             file_path: Path to file
         """
+        logger.trace(f"Starting {__name__}...")
         session = self.load_session()
         if session and file_path in session.open_files:
             session.open_files.remove(file_path)
@@ -161,6 +167,7 @@ def get_session_manager(session_file: Optional[Path] = None) -> SessionManager:
     Returns:
         SessionManager instance
     """
+    logger.trace(f"Starting {__name__}...")
     global _session_manager
 
     if _session_manager is None:

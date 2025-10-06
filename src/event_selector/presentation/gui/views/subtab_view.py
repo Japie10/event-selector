@@ -36,6 +36,7 @@ class SubtabView(QWidget):
             parent: Parent widget
         """
         super().__init__(parent)
+        logger.trace(f"Starting {__name__}...")
         
         self.project_id = project_id
         self.subtab_name = subtab_name
@@ -45,6 +46,7 @@ class SubtabView(QWidget):
     
     def _setup_ui(self) -> None:
         """Setup subtab UI."""
+        logger.trace(f"Starting {__name__}...")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -66,6 +68,7 @@ class SubtabView(QWidget):
         Returns:
             SubtabContext with this subtab's information
         """
+        logger.trace(f"Starting {__name__}...")
         return SubtabContext(
             project_id=self.project_id,
             subtab_name=self.subtab_name,
@@ -87,6 +90,7 @@ class SubtabView(QWidget):
             undo_desc: Description of undo command
             redo_desc: Description of redo command
         """
+        logger.trace(f"Starting {__name__}...")
         self.toolbar.update_undo_state(can_undo, undo_desc)
         self.toolbar.update_redo_state(can_redo, redo_desc)
     
@@ -97,6 +101,7 @@ class SubtabView(QWidget):
             selected: Number of selected events
             total: Total number of events
         """
+        logger.trace(f"Starting {__name__}...")
         self.toolbar.update_counter(selected, total)
     
     def refresh_from_model(self, view_model, current_mode: MaskMode) -> None:
@@ -106,6 +111,7 @@ class SubtabView(QWidget):
             view_model: SubtabViewModel with event data
             current_mode: Current mask mode
         """
+        logger.trace(f"Starting {__name__}...")
         # Update event table
         self.event_table.set_events(view_model.events, current_mode)
         

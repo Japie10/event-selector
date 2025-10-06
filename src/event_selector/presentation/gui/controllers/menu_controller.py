@@ -11,19 +11,23 @@ from event_selector.shared.types import MaskMode
 if TYPE_CHECKING:
     from event_selector.presentation.gui.main_window import MainWindow
     from event_selector.presentation.gui.controllers.project_controller import ProjectController
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 class MenuController:
     """Handles menu creation and actions - COMPLETE VERSION."""
 
     def __init__(self, main_window: 'MainWindow', project_controller: 'ProjectController'):
         """Initialize menu controller."""
+        logger.trace(f"Starting {__name__}...")
         self.window = main_window
         self.project_controller = project_controller
         self.actions = {}
 
     def setup_menus(self):
         """Setup all menus."""
+        logger.trace(f"Starting {__name__}...")
         menubar = self.window.menuBar()
 
         self._setup_file_menu(menubar)
@@ -33,6 +37,7 @@ class MenuController:
 
     def _setup_file_menu(self, menubar):
         """Setup File menu."""
+        logger.trace(f"Starting {__name__}...")
         file_menu = menubar.addMenu("&File")
 
         # Open
@@ -78,6 +83,7 @@ class MenuController:
 
     def _setup_edit_menu(self, menubar):
         """Setup Edit menu."""
+        logger.trace(f"Starting {__name__}...")
         edit_menu = menubar.addMenu("&Edit")
 
         # Undo/Redo
@@ -119,6 +125,7 @@ class MenuController:
 
     def _setup_view_menu(self, menubar):
         """Setup View menu."""
+        logger.trace(f"Starting {__name__}...")
         view_menu = menubar.addMenu("&View")
 
         # Problems dock
@@ -130,6 +137,7 @@ class MenuController:
 
     def _setup_help_menu(self, menubar):
         """Setup Help menu."""
+        logger.trace(f"Starting {__name__}...")
         help_menu = menubar.addMenu("&Help")
 
         # About
@@ -140,6 +148,7 @@ class MenuController:
     # Action handlers
     def _import_event_mask(self):
         """Import event mask file."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -168,6 +177,7 @@ class MenuController:
 
     def _import_capture_mask(self):
         """Import capture mask file."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -196,6 +206,7 @@ class MenuController:
 
     def _export_event_mask(self):
         """Export event mask file."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -224,6 +235,7 @@ class MenuController:
 
     def _export_capture_mask(self):
         """Export capture mask file."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -252,6 +264,7 @@ class MenuController:
 
     def _export_both(self):
         """Export both mask and capture mask files."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if not view:
             QMessageBox.warning(
@@ -280,42 +293,49 @@ class MenuController:
 
     def _undo(self):
         """Undo last operation."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.undo()
 
     def _redo(self):
         """Redo last operation."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.redo()
 
     def _select_all(self):
         """Select all events."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.select_all()
 
     def _clear_all(self):
         """Clear all events."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.clear_all()
 
     def _select_errors(self):
         """Select all error events."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.select_errors()
 
     def _select_syncs(self):
         """Select all sync events."""
+        logger.trace(f"Starting {__name__}...")
         view = self.window.get_current_project_view()
         if view:
             view.select_syncs()
 
     def _toggle_problems_dock(self):
         """Toggle problems dock visibility."""
+        logger.trace(f"Starting {__name__}...")
         self.window.toggle_problems_dock()
         
         # Update checked state
@@ -325,6 +345,7 @@ class MenuController:
 
     def _show_about(self):
         """Show about dialog."""
+        logger.trace(f"Starting {__name__}...")
         try:
             from event_selector._version import version
         except ImportError:

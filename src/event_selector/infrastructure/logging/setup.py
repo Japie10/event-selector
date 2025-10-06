@@ -10,6 +10,10 @@ from pythonjsonlogger import jsonlogger
 from event_selector.presentation.gui.widgets.problems_dock import ProblemsLogHandler
 
 
+# Add custom TRACE level (below DEBUG, which is 10)
+logger.level("TRACE", no=5, color="<blue>", icon="🔍")
+
+
 def setup_logging(
     log_level: str = "INFO",
     log_file: Optional[Path] = None,
@@ -70,3 +74,14 @@ def setup_logging(
         )
     
     return logger
+
+def get_logger(name: str):
+    """Get a logger instance with the given name.
+    
+    Args:
+        name: Logger name (typically __name__)
+        
+    Returns:
+        Logger instance
+    """
+    return logger.bind(name=name)

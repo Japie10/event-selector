@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from event_selector.presentation.gui.main_window import MainWindow
     from event_selector.presentation.gui.controllers.project_controller import ProjectController
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 class ToolbarController:
     """Handles toolbar creation and management."""
@@ -17,11 +19,13 @@ class ToolbarController:
             main_window: Main window reference
             project_controller: Project controller
         """
+        logger.trace(f"Starting {__name__}...")
         self.window = main_window
         self.project_controller = project_controller
 
     def setup_toolbar(self):
         """Setup toolbar with common actions."""
+        logger.trace(f"Starting {__name__}...")
         toolbar = self.window.addToolBar("Main")
         toolbar.setMovable(False)
 

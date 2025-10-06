@@ -16,7 +16,6 @@ class Command(ABC):
         Args:
             description: Human-readable description
         """
-        logger.trace(f"Executed macro: {self._description}")
         self._description = description
         self._executed = False
 

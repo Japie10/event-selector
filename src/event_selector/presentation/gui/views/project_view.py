@@ -35,6 +35,7 @@ class ProjectView(QWidget):
             parent: Parent widget
         """
         super().__init__(parent)
+        logger.trace(f"Starting {__name__}...")
 
         self.view_model = view_model
         self.facade = facade
@@ -47,6 +48,7 @@ class ProjectView(QWidget):
 
     def _init_ui(self):
         """Initialize UI."""
+        logger.trace(f"Starting {__name__}...")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -81,6 +83,7 @@ class ProjectView(QWidget):
 
     def _setup_tab_switch_callback(self):
         """Setup callback for auto tab switching on undo/redo."""
+        logger.trace(f"Starting {__name__}...")
         def switch_callback(subtab_name: str, subtab_index: int):
             """Called when undo/redo needs to switch tabs."""
             logger.debug(f"Auto-switching to subtab: {subtab_name} (index {subtab_index})")
@@ -94,6 +97,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab view to connect
         """
+        logger.trace(f"Starting {__name__}...")
         toolbar = subtab_view.toolbar
         
         # Undo/Redo
@@ -129,6 +133,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where undo was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         context = subtab_view.get_context()
         
         try:
@@ -155,6 +160,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where redo was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         context = subtab_view.get_context()
         
         try:
@@ -177,6 +183,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where select all was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         context = subtab_view.get_context()
         
         try:
@@ -200,6 +207,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where clear all was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         context = subtab_view.get_context()
         
         try:
@@ -223,6 +231,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where select errors was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         # TODO: Implement SelectErrorsCommand
         self.status_message.emit("Select errors not yet implemented")
 
@@ -232,6 +241,7 @@ class ProjectView(QWidget):
         Args:
             subtab_view: The subtab where select syncs was clicked
         """
+        logger.trace(f"Starting {__name__}...")
         # TODO: Implement SelectSyncsCommand
         self.status_message.emit("Select syncs not yet implemented")
 
@@ -242,6 +252,7 @@ class ProjectView(QWidget):
             subtab_view: The subtab where event was toggled
             event_key: Key of the toggled event
         """
+        logger.trace(f"Starting {__name__}...")
         context = subtab_view.get_context()
         
         try:
@@ -265,6 +276,7 @@ class ProjectView(QWidget):
         Args:
             index: New tab index
         """
+        logger.trace(f"Starting {__name__}...")
         if index >= 0 and index < len(self.view_model.subtabs):
             subtab_name = self.view_model.subtabs[index].name
             logger.debug(f"Switched to subtab: {subtab_name}")
@@ -278,6 +290,7 @@ class ProjectView(QWidget):
         Args:
             subtab_name: Name of subtab to refresh
         """
+        logger.trace(f"Starting {__name__}...")
         if subtab_name not in self.subtab_views:
             return
         
@@ -295,6 +308,7 @@ class ProjectView(QWidget):
 
     def _refresh_all_subtabs(self):
         """Refresh all subtabs from the domain model."""
+        logger.trace(f"Starting {__name__}...")
         for subtab_vm in self.view_model.subtabs:
             self._refresh_subtab(subtab_vm.name)
 
@@ -304,6 +318,7 @@ class ProjectView(QWidget):
         Args:
             subtab_name: Name of subtab to update
         """
+        logger.trace(f"Starting {__name__}...")
         if subtab_name not in self.subtab_views:
             return
         
@@ -323,6 +338,7 @@ class ProjectView(QWidget):
 
     def _update_all_undo_redo_states(self):
         """Update undo/redo states for all subtabs."""
+        logger.trace(f"Starting {__name__}...")
         for subtab_vm in self.view_model.subtabs:
             self._update_subtab_undo_redo_state(subtab_vm.name)
 
@@ -332,6 +348,7 @@ class ProjectView(QWidget):
         Args:
             mode: New mask mode (EVENT or CAPTURE)
         """
+        logger.trace(f"Starting {__name__}...")
         if mode != self.current_mode:
             self.current_mode = mode
             self._refresh_all_subtabs()

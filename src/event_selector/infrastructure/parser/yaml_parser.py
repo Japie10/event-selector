@@ -40,6 +40,7 @@ class YamlParser:
             FileNotFoundError: If file doesn't exist
             YamlParserError: If parsing fails
         """
+        logger.trace(f"Starting {__name__}...")
         if not filepath.exists():
             raise FileNotFoundError(f"YAML file not found: {filepath}")
 
@@ -72,6 +73,7 @@ class YamlParser:
         Raises:
             YamlParserError: If parsing fails
         """
+        logger.trace(f"Starting {__name__}...")
         if not isinstance(data, dict):
             raise YamlParserError(f"Expected dict, got {type(data).__name__}", file=source)
 
@@ -94,6 +96,7 @@ class YamlParser:
         Returns:
             Detected FormatType
         """
+        logger.trace(f"Starting {__name__}...")
         # MK2 indicators
         if 'id_names' in data or 'base_address' in data:
             return FormatType.MK2
@@ -119,6 +122,7 @@ class YamlParser:
     @staticmethod
     def _parse_address(key: Any) -> int:
         """Parse key to integer address."""
+        logger.trace(f"Starting {__name__}...")
         if isinstance(key, int):
             return key
         if isinstance(key, str):

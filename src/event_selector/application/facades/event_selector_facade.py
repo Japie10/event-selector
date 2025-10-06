@@ -42,6 +42,7 @@ class EventSelectorFacade:
         Returns:
             Tuple of (Project instance, ValidationResult)
         """
+        logger.trace(f"Starting {__name__}...")
         project_id = str(yaml_path)
         
         # Parse YAML
@@ -67,6 +68,7 @@ class EventSelectorFacade:
             project_id: Project identifier
             callback: Function that switches tabs (subtab_name, subtab_index)
         """
+        logger.trace(f"Starting {__name__}...")
         if project_id in self._subtab_stacks:
             self._subtab_stacks[project_id].set_tab_switch_callback(callback)
 
@@ -82,6 +84,7 @@ class EventSelectorFacade:
         Raises:
             KeyError: If project not found
         """
+        logger.trace(f"Starting {__name__}...")
         if project_id not in self._projects:
             raise KeyError(f"Project not found: {project_id}")
         return self._projects[project_id]
@@ -101,6 +104,7 @@ class EventSelectorFacade:
             mode: Mask mode (EVENT or CAPTURE)
             context: Subtab context for undo/redo
         """
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         command = ToggleEventCommand(project, event_key, mode)
 
@@ -124,6 +128,7 @@ class EventSelectorFacade:
             mode: Mask mode (EVENT or CAPTURE)
             context: Subtab context for undo/redo
         """
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         commands = [
             ToggleEventCommand(project, key, mode) 
@@ -149,6 +154,7 @@ class EventSelectorFacade:
             mode: Mask mode (EVENT or CAPTURE)
             context: Subtab context for undo/redo
         """
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         command = SelectAllCommand(project, mode, context.subtab_name)
 
@@ -170,6 +176,7 @@ class EventSelectorFacade:
             mode: Mask mode (EVENT or CAPTURE)
             context: Subtab context for undo/redo
         """
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         command = ClearAllCommand(project, mode, context.subtab_name)
 
@@ -194,6 +201,7 @@ class EventSelectorFacade:
         Returns:
             Description of undone command, or None if nothing to undo
         """
+        logger.trace(f"Starting {__name__}...")
         stack = self._get_subtab_stack(project_id)
         command = stack.undo(context.subtab_name, context)
         
@@ -217,6 +225,7 @@ class EventSelectorFacade:
         Returns:
             Description of redone command, or None if nothing to redo
         """
+        logger.trace(f"Starting {__name__}...")
         stack = self._get_subtab_stack(project_id)
         command = stack.redo(context.subtab_name, context)
         
@@ -236,6 +245,7 @@ class EventSelectorFacade:
         Returns:
             True if undo is available
         """
+        logger.trace(f"Starting {__name__}...")
         stack = self._get_subtab_stack(project_id)
         return stack.can_undo(subtab_name)
 
@@ -249,6 +259,7 @@ class EventSelectorFacade:
         Returns:
             True if redo is available
         """
+        logger.trace(f"Starting {__name__}...")
         stack = self._get_subtab_stack(project_id)
         return stack.can_redo(subtab_name)
 
@@ -262,6 +273,7 @@ class EventSelectorFacade:
         Returns:
             Description string or None
         """
+        logger.trace(f"Starting {__name__}...")
         stack = self._get_subtab_stack(project_id)
         return stack.get_undo_description(subtab_name)
 
@@ -287,12 +299,14 @@ class EventSelectorFacade:
         Returns:
             SubtabCommandStack instance
         """
+        logger.trace(f"Starting {__name__}...")
         if project_id not in self._subtab_stacks:
             self._subtab_stacks[project_id] = SubtabCommandStack(max_size_per_subtab=100)
         return self._subtab_stacks[project_id]
 
     def import_mask(self, project_id: str, file_path: Path, mode: MaskMode) -> ValidationResult:
         """Import mask from file."""
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         mask_data = self._importer.import_file(file_path)
 
@@ -306,6 +320,7 @@ class EventSelectorFacade:
 
     def export_mask(self, project_id: str, file_path: Path, mode: MaskMode):
         """Export mask to file."""
+        logger.trace(f"Starting {__name__}...")
         project = self.get_project(project_id)
         mask_data = project.get_active_mask(mode)
 
@@ -318,11 +333,13 @@ class EventSelectorFacade:
 
     def export_both_masks(self, project_id: str, mask_path: Path, trigger_path: Path):
         """Export both event mask and capture mask."""
+        logger.trace(f"Starting {__name__}...")
         self.export_mask(project_id, mask_path, MaskMode.EVENT)
         self.export_mask(project_id, trigger_path, MaskMode.CAPTURE)
 
     def _get_command_stack(self, project_id: str) -> CommandStack:
         """Get or create command stack for project."""
+        logger.trace(f"Starting {__name__}...")
         if project_id not in self._command_stacks:
             self._command_stacks[project_id] = CommandStack(max_size=100)
         return self._command_stacks[project_id]

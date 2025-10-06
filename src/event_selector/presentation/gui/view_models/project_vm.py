@@ -24,6 +24,7 @@ class EventRowViewModel:
 
     def __post_init__(self):
         """Compute derived properties."""
+        logger.trace(f"Starting {__name__}...")
         info_lower = self.info.lower()
         self.is_error = 'error' in info_lower
         self.is_sync = any(

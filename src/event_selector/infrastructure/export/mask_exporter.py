@@ -83,6 +83,7 @@ class MaskExporter:
         Returns:
             List of header lines
         """
+        logger.trace(f"Starting {__name__}...")
         lines = []
 
         # Format line
@@ -125,6 +126,7 @@ class MaskExporter:
         Returns:
             List of value lines
         """
+        logger.trace(f"Starting {__name__}...")
         lines = []
 
         # Format based on mask format type
@@ -167,6 +169,7 @@ class MaskExporter:
         Returns:
             List of formatted lines
         """
+        logger.trace(f"Starting {__name__}...")
         lines = []
 
         # MK2: 16 IDs (0x00-0x0F), mask bits 28-31
@@ -198,6 +201,7 @@ class MaskExporter:
             capture_mask_path: Output path for capture mask file
             yaml_file: Optional YAML file reference
         """
+        logger.trace(f"Starting {__name__}...")
         self.export_file(event_mask_data, event_mask_path, include_metadata=True, yaml_file=yaml_file)
         self.export_file(capture_mask_data, capture_mask_path, include_metadata=True, yaml_file=yaml_file)
 

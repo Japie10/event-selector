@@ -18,6 +18,7 @@ class SelectAllCommand(Command):
 
     def __init__(self, project: Project, mode: MaskMode, subtab_name: str):
         super().__init__(f"Select all in {subtab_name}")
+        logger.trace(f"Starting {__name__}...")
         self.project = project
         self.mode = mode
         self.subtab_name = subtab_name
@@ -25,6 +26,7 @@ class SelectAllCommand(Command):
 
     def execute(self):
         """Select all events."""
+        logger.trace(f"Starting {__name__}...")
         mask = self.project.get_active_mask(self.mode)
         self._previous_state = mask.data.copy()
 
@@ -38,6 +40,7 @@ class SelectAllCommand(Command):
 
     def undo(self):
         """Restore previous state."""
+        logger.trace(f"Starting {__name__}...")
         if self._previous_state is not None:
             mask = self.project.get_active_mask(self.mode)
             mask.data[:] = self._previous_state
@@ -49,6 +52,7 @@ class SelectAllCommand(Command):
         Returns:
             List of Event objects for this subtab
         """
+        logger.trace(f"Starting {__name__}...")
         format_obj = self.project.format
 
         if isinstance(format_obj, Mk1Format):
@@ -79,6 +83,7 @@ class SelectAllCommand(Command):
         Returns:
             ID number (0-15) or None if not found
         """
+        logger.trace(f"Starting {__name__}...")
         # Try pattern: "Name (0xNN)"
         match = re.search(r'\(0x([0-9A-Fa-f]{1,2})\)', name)
         if match:
@@ -98,6 +103,7 @@ class ClearAllCommand(Command):
 
     def __init__(self, project: Project, mode: MaskMode, subtab_name: str):
         super().__init__(f"Clear all in {subtab_name}")
+        logger.trace(f"Starting {__name__}...")
         self.project = project
         self.mode = mode
         self.subtab_name = subtab_name
@@ -105,6 +111,7 @@ class ClearAllCommand(Command):
 
     def execute(self):
         """Clear all events."""
+        logger.trace(f"Starting {__name__}...")
         mask = self.project.get_active_mask(self.mode)
         self._previous_state = mask.data.copy()
 
@@ -118,6 +125,7 @@ class ClearAllCommand(Command):
 
     def undo(self):
         """Restore previous state."""
+        logger.trace(f"Starting {__name__}...")
         if self._previous_state is not None:
             mask = self.project.get_active_mask(self.mode)
             mask.data[:] = self._previous_state
@@ -129,6 +137,7 @@ class ClearAllCommand(Command):
         Returns:
             List of Event objects for this subtab
         """
+        logger.trace(f"Starting {__name__}...")
         format_obj = self.project.format
 
         if isinstance(format_obj, Mk1Format):
@@ -156,6 +165,7 @@ class ClearAllCommand(Command):
         Returns:
             ID number (0-15) or None if not found
         """
+        logger.trace(f"Starting {__name__}...")
         # Try pattern: "Name (0xNN)"
         match = re.search(r'\(0x([0-9A-Fa-f]{1,2})\)', name)
         if match:

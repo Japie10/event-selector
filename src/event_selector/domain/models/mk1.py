@@ -12,7 +12,9 @@ from event_selector.shared.exceptions import AddressError, ValidationError
 from event_selector.domain.models.base import Event, EventFormat
 from event_selector.domain.models.value_objects import EventAddress, EventInfo
 from event_selector.domain.interfaces.format_strategy import ValidationResult
+from event_selector.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 @dataclass
 class Mk1Event(Event):
@@ -21,6 +23,7 @@ class Mk1Event(Event):
     
     def __post_init__(self):
         """Validate MK1 event."""
+        logger.trace(f"Starting {__name__}...")
         # Validate address is in valid ranges
         addr_value = self.address.value
         valid = False
@@ -38,6 +41,7 @@ class Mk1Event(Event):
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
+        logger.trace(f"Starting {__name__}...")
         return {
             'address': self.address.hex,
             'event_source': self.info.source,
@@ -47,6 +51,7 @@ class Mk1Event(Event):
     
     def get_coordinate(self) -> EventCoordinate:
         """Get the coordinate (ID, bit) for this event."""
+        logger.trace(f"Starting {__name__}...")
         addr_value = self.address.value
         
         # Find which range this address belongs to
@@ -75,6 +80,7 @@ class Mk1Event(Event):
     @classmethod
     def from_dict(cls, data: dict[str, Any], key: EventKey) -> 'Mk1Event':
         """Create from dictionary representation."""
+        logger.trace(f"Starting {__name__}...")
         # Parse address from key
         address = EventAddress.from_hex(key)
         
@@ -93,11 +99,13 @@ class Mk1Format(EventFormat):
     
     def __init__(self):
         """Initialize MK1 format."""
+        logger.trace(f"Starting {__name__}...")
         super().__init__(format_type=FormatType.MK1)
         self._subtab_names = ["Data", "Network", "Application"]
     
     def add_event(self, key: EventKey, info: EventInfo) -> None:
         """Add an MK1 event."""
+        logger.trace(f"Starting {__name__}...")
         # Normalize the key
         try:
             if isinstance(key, str):
@@ -121,6 +129,7 @@ class Mk1Format(EventFormat):
     
     def remove_event(self, key: EventKey) -> None:
         """Remove an event."""
+        logger.trace(f"Starting {__name__}...")
         normalized_key = self._normalize_key(key)
         if normalized_key not in self.events:
             raise KeyError(f"Event {key} not found")
@@ -128,11 +137,13 @@ class Mk1Format(EventFormat):
     
     def get_event(self, key: EventKey) -> Optional[Mk1Event]:
         """Get an event by key."""
+        logger.trace(f"Starting {__name__}...")
         normalized_key = self._normalize_key(key)
         return self.events.get(normalized_key)
     
     def validate(self) -> ValidationResult:
         """Validate the MK1 format structure."""
+        logger.trace(f"Starting {__name__}...")
         result = ValidationResult()
         
         # Check for duplicate keys (already handled by dict)
@@ -168,6 +179,7 @@ class Mk1Format(EventFormat):
     
     def get_subtab_config(self) -> dict[str, Any]:
         """Get GUI subtab configuration for MK1."""
+        logger.trace(f"Starting {__name__}...")
         return {
             'type': 'fixed',
             'subtabs': [
@@ -194,6 +206,7 @@ class Mk1Format(EventFormat):
     
     def _normalize_key(self, key: str | int) -> EventKey:
         """Normalize a key to standard MK1 format (0xNNN)."""
+        logger.trace(f"Starting {__name__}...")
         try:
             if isinstance(key, str):
                 address = EventAddress.from_hex(key)
@@ -205,6 +218,7 @@ class Mk1Format(EventFormat):
     
     def get_events_by_subtab(self, subtab_name: str) -> dict[EventKey, Mk1Event]:
         """Get all events for a specific subtab."""
+        logger.trace(f"Starting {__name__}...")
         if subtab_name not in self._subtab_names:
             raise ValueError(f"Invalid subtab: {subtab_name}")
         
@@ -238,6 +252,7 @@ class Mk1Format(EventFormat):
         Raises:
             ValueError: If key is invalid or not in MK1 ranges
         """
+        logger.trace(f"Starting {__name__}...")
         if isinstance(key, int):
             addr = key
         elif isinstance(key, str):
@@ -271,6 +286,7 @@ class Mk1Format(EventFormat):
             Tuple of (events dict, empty dict - MK1 has no extra data)
         """
         from event_selector.domain.interfaces.format_strategy import ValidationCode
+        logger.trace(f"Starting {__name__}...")
 
         events = {}
         seen_keys = set()
@@ -343,4 +359,5 @@ class Mk1Format(EventFormat):
         Returns:
             Mk1Format instance
         """
+        logger.trace(f"Starting {__name__}...")
         return cls(sources=sources, events=events)
