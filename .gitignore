@@ -36,6 +36,7 @@ env/
 .coverage
 .coverage.*
 .cache
+.mypy_cache/
 .pytest_cache/
 htmlcov/
 .hypothesis/

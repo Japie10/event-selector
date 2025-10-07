@@ -55,11 +55,12 @@ class EventCoordinate:
     id: EventID
     bit: BitPosition
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not 0 <= self.id <= 255:  # Support up to 256 IDs
             raise ValueError(f"Invalid ID: {self.id}")
         if not 0 <= self.bit <= 31:
             raise ValueError(f"Invalid bit position: {self.bit}")
+        return None
 
 
 @dataclass(frozen=True)

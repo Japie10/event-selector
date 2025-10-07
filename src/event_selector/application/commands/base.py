@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from event_selector.infrastructure.logging import get_logger
 
-logger = get_logger(__name__)
+logger:  = get_logger(__name__)
 
 
 class Command(ABC):

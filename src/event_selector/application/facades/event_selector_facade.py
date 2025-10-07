@@ -13,8 +13,8 @@ from event_selector.application.commands.bulk_operations import (
 from event_selector.domain.models.base import Project
 from event_selector.domain.interfaces.format_strategy import ValidationResult
 from event_selector.infrastructure.parser.yaml_parser import YamlParser
-from event_selector.infrastructure.export.mask_exporter import MaskExporter
-from event_selector.infrastructure.import.mask_importer import MaskImporter
+from event_selector.infrastructure.exports.mask_exporter import MaskExporter
+from event_selector.infrastructure.imports.mask_importer import MaskImporter
 from event_selector.shared.types import EventKey, MaskMode
 from event_selector.infrastructure.logging import get_logger
 
